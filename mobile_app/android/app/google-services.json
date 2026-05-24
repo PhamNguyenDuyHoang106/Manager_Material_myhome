@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "215561197737",
+    "project_id": "materialmanagerment-myhome",
+    "storage_bucket": "materialmanagerment-myhome.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:215561197737:android:72673b1c9f933a2ad271b8",
+        "android_client_info": {
+          "package_name": "com.example.material_manager_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQyPPAAeQzBIhiXiny3MHCCnvf22NiZFo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

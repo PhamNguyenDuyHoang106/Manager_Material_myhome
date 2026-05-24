@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function validString(field, minLen, maxLen) {
+      return request.resource.data[field] is string
+        && request.resource.data[field].size() >= minLen
+        && request.resource.data[field].size() <= maxLen;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /customers/{customerId} {
+        allow read, write: if isOwner(userId)
+          && validString('name', 1, 200)
+          && request.resource.data.phone is string
+          && request.resource.data.address is string;
+      }
+
+      match /materials/{materialId} {
+        allow read, write: if isOwner(userId)
+          && validString('name', 1, 200)
+          && request.resource.data.currentStock is number
+          && request.resource.data.currentStock >= 0;
+      }
+
+      match /inventory_transactions/{txId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /invoices/{invoiceId} {
+        allow read, write: if isOwner(userId);
+
+        match /invoice_items/{itemId} {
+          allow read, write: if isOwner(userId);
+        }
+      }
+
+      match /payments/{paymentId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /settings/{docId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+  }
+}
