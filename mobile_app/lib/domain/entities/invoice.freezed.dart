@@ -309,16 +309,20 @@ mixin _$Invoice {
   String get id => throw _privateConstructorUsedError;
   String get customerId => throw _privateConstructorUsedError;
   String get customerName => throw _privateConstructorUsedError;
-  String get invoiceDate => throw _privateConstructorUsedError;
+  DateTime get invoiceDate => throw _privateConstructorUsedError;
   @JsonKey(name: 'totalAmountCents')
   int get totalAmountCents => throw _privateConstructorUsedError;
   @JsonKey(name: 'paidAmountCents')
   int get paidAmountCents => throw _privateConstructorUsedError;
   @InvoiceStatusConverter()
   InvoiceStatus get status => throw _privateConstructorUsedError;
-  String get createdAt => throw _privateConstructorUsedError;
-  String get updatedAt => throw _privateConstructorUsedError;
+  DateTime get createdAt => throw _privateConstructorUsedError;
+  DateTime get updatedAt => throw _privateConstructorUsedError;
   List<InvoiceItem> get items => throw _privateConstructorUsedError;
+  String get deliveryAddress => throw _privateConstructorUsedError;
+  String get deliveryNote => throw _privateConstructorUsedError;
+  bool get isDeleted => throw _privateConstructorUsedError;
+  DateTime? get deletedAt => throw _privateConstructorUsedError;
 
   /// Serializes this Invoice to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -338,13 +342,17 @@ abstract class $InvoiceCopyWith<$Res> {
       {String id,
       String customerId,
       String customerName,
-      String invoiceDate,
+      DateTime invoiceDate,
       @JsonKey(name: 'totalAmountCents') int totalAmountCents,
       @JsonKey(name: 'paidAmountCents') int paidAmountCents,
       @InvoiceStatusConverter() InvoiceStatus status,
-      String createdAt,
-      String updatedAt,
-      List<InvoiceItem> items});
+      DateTime createdAt,
+      DateTime updatedAt,
+      List<InvoiceItem> items,
+      String deliveryAddress,
+      String deliveryNote,
+      bool isDeleted,
+      DateTime? deletedAt});
 }
 
 /// @nodoc
@@ -372,6 +380,10 @@ class _$InvoiceCopyWithImpl<$Res, $Val extends Invoice>
     Object? createdAt = null,
     Object? updatedAt = null,
     Object? items = null,
+    Object? deliveryAddress = null,
+    Object? deliveryNote = null,
+    Object? isDeleted = null,
+    Object? deletedAt = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -389,7 +401,7 @@ class _$InvoiceCopyWithImpl<$Res, $Val extends Invoice>
       invoiceDate: null == invoiceDate
           ? _value.invoiceDate
           : invoiceDate // ignore: cast_nullable_to_non_nullable
-              as String,
+              as DateTime,
       totalAmountCents: null == totalAmountCents
           ? _value.totalAmountCents
           : totalAmountCents // ignore: cast_nullable_to_non_nullable
@@ -405,15 +417,31 @@ class _$InvoiceCopyWithImpl<$Res, $Val extends Invoice>
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
-              as String,
+              as DateTime,
       updatedAt: null == updatedAt
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
-              as String,
+              as DateTime,
       items: null == items
           ? _value.items
           : items // ignore: cast_nullable_to_non_nullable
               as List<InvoiceItem>,
+      deliveryAddress: null == deliveryAddress
+          ? _value.deliveryAddress
+          : deliveryAddress // ignore: cast_nullable_to_non_nullable
+              as String,
+      deliveryNote: null == deliveryNote
+          ? _value.deliveryNote
+          : deliveryNote // ignore: cast_nullable_to_non_nullable
+              as String,
+      isDeleted: null == isDeleted
+          ? _value.isDeleted
+          : isDeleted // ignore: cast_nullable_to_non_nullable
+              as bool,
+      deletedAt: freezed == deletedAt
+          ? _value.deletedAt
+          : deletedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ) as $Val);
   }
 }
@@ -429,13 +457,17 @@ abstract class _$$InvoiceImplCopyWith<$Res> implements $InvoiceCopyWith<$Res> {
       {String id,
       String customerId,
       String customerName,
-      String invoiceDate,
+      DateTime invoiceDate,
       @JsonKey(name: 'totalAmountCents') int totalAmountCents,
       @JsonKey(name: 'paidAmountCents') int paidAmountCents,
       @InvoiceStatusConverter() InvoiceStatus status,
-      String createdAt,
-      String updatedAt,
-      List<InvoiceItem> items});
+      DateTime createdAt,
+      DateTime updatedAt,
+      List<InvoiceItem> items,
+      String deliveryAddress,
+      String deliveryNote,
+      bool isDeleted,
+      DateTime? deletedAt});
 }
 
 /// @nodoc
@@ -461,6 +493,10 @@ class __$$InvoiceImplCopyWithImpl<$Res>
     Object? createdAt = null,
     Object? updatedAt = null,
     Object? items = null,
+    Object? deliveryAddress = null,
+    Object? deliveryNote = null,
+    Object? isDeleted = null,
+    Object? deletedAt = freezed,
   }) {
     return _then(_$InvoiceImpl(
       id: null == id
@@ -478,7 +514,7 @@ class __$$InvoiceImplCopyWithImpl<$Res>
       invoiceDate: null == invoiceDate
           ? _value.invoiceDate
           : invoiceDate // ignore: cast_nullable_to_non_nullable
-              as String,
+              as DateTime,
       totalAmountCents: null == totalAmountCents
           ? _value.totalAmountCents
           : totalAmountCents // ignore: cast_nullable_to_non_nullable
@@ -494,15 +530,31 @@ class __$$InvoiceImplCopyWithImpl<$Res>
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
-              as String,
+              as DateTime,
       updatedAt: null == updatedAt
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
-              as String,
+              as DateTime,
       items: null == items
           ? _value._items
           : items // ignore: cast_nullable_to_non_nullable
               as List<InvoiceItem>,
+      deliveryAddress: null == deliveryAddress
+          ? _value.deliveryAddress
+          : deliveryAddress // ignore: cast_nullable_to_non_nullable
+              as String,
+      deliveryNote: null == deliveryNote
+          ? _value.deliveryNote
+          : deliveryNote // ignore: cast_nullable_to_non_nullable
+              as String,
+      isDeleted: null == isDeleted
+          ? _value.isDeleted
+          : isDeleted // ignore: cast_nullable_to_non_nullable
+              as bool,
+      deletedAt: freezed == deletedAt
+          ? _value.deletedAt
+          : deletedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ));
   }
 }
@@ -520,7 +572,11 @@ class _$InvoiceImpl implements _Invoice {
       @InvoiceStatusConverter() required this.status,
       required this.createdAt,
       required this.updatedAt,
-      final List<InvoiceItem> items = const []})
+      final List<InvoiceItem> items = const [],
+      this.deliveryAddress = '',
+      this.deliveryNote = '',
+      this.isDeleted = false,
+      this.deletedAt})
       : _items = items;
 
   factory _$InvoiceImpl.fromJson(Map<String, dynamic> json) =>
@@ -533,7 +589,7 @@ class _$InvoiceImpl implements _Invoice {
   @override
   final String customerName;
   @override
-  final String invoiceDate;
+  final DateTime invoiceDate;
   @override
   @JsonKey(name: 'totalAmountCents')
   final int totalAmountCents;
@@ -544,9 +600,9 @@ class _$InvoiceImpl implements _Invoice {
   @InvoiceStatusConverter()
   final InvoiceStatus status;
   @override
-  final String createdAt;
+  final DateTime createdAt;
   @override
-  final String updatedAt;
+  final DateTime updatedAt;
   final List<InvoiceItem> _items;
   @override
   @JsonKey()
@@ -557,8 +613,20 @@ class _$InvoiceImpl implements _Invoice {
   }
 
   @override
+  @JsonKey()
+  final String deliveryAddress;
+  @override
+  @JsonKey()
+  final String deliveryNote;
+  @override
+  @JsonKey()
+  final bool isDeleted;
+  @override
+  final DateTime? deletedAt;
+
+  @override
   String toString() {
-    return 'Invoice(id: $id, customerId: $customerId, customerName: $customerName, invoiceDate: $invoiceDate, totalAmountCents: $totalAmountCents, paidAmountCents: $paidAmountCents, status: $status, createdAt: $createdAt, updatedAt: $updatedAt, items: $items)';
+    return 'Invoice(id: $id, customerId: $customerId, customerName: $customerName, invoiceDate: $invoiceDate, totalAmountCents: $totalAmountCents, paidAmountCents: $paidAmountCents, status: $status, createdAt: $createdAt, updatedAt: $updatedAt, items: $items, deliveryAddress: $deliveryAddress, deliveryNote: $deliveryNote, isDeleted: $isDeleted, deletedAt: $deletedAt)';
   }
 
   @override
@@ -582,7 +650,15 @@ class _$InvoiceImpl implements _Invoice {
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
-            const DeepCollectionEquality().equals(other._items, _items));
+            const DeepCollectionEquality().equals(other._items, _items) &&
+            (identical(other.deliveryAddress, deliveryAddress) ||
+                other.deliveryAddress == deliveryAddress) &&
+            (identical(other.deliveryNote, deliveryNote) ||
+                other.deliveryNote == deliveryNote) &&
+            (identical(other.isDeleted, isDeleted) ||
+                other.isDeleted == isDeleted) &&
+            (identical(other.deletedAt, deletedAt) ||
+                other.deletedAt == deletedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -598,7 +674,11 @@ class _$InvoiceImpl implements _Invoice {
       status,
       createdAt,
       updatedAt,
-      const DeepCollectionEquality().hash(_items));
+      const DeepCollectionEquality().hash(_items),
+      deliveryAddress,
+      deliveryNote,
+      isDeleted,
+      deletedAt);
 
   /// Create a copy of Invoice
   /// with the given fields replaced by the non-null parameter values.
@@ -621,13 +701,17 @@ abstract class _Invoice implements Invoice {
       {required final String id,
       required final String customerId,
       required final String customerName,
-      required final String invoiceDate,
+      required final DateTime invoiceDate,
       @JsonKey(name: 'totalAmountCents') required final int totalAmountCents,
       @JsonKey(name: 'paidAmountCents') final int paidAmountCents,
       @InvoiceStatusConverter() required final InvoiceStatus status,
-      required final String createdAt,
-      required final String updatedAt,
-      final List<InvoiceItem> items}) = _$InvoiceImpl;
+      required final DateTime createdAt,
+      required final DateTime updatedAt,
+      final List<InvoiceItem> items,
+      final String deliveryAddress,
+      final String deliveryNote,
+      final bool isDeleted,
+      final DateTime? deletedAt}) = _$InvoiceImpl;
 
   factory _Invoice.fromJson(Map<String, dynamic> json) = _$InvoiceImpl.fromJson;
 
@@ -638,7 +722,7 @@ abstract class _Invoice implements Invoice {
   @override
   String get customerName;
   @override
-  String get invoiceDate;
+  DateTime get invoiceDate;
   @override
   @JsonKey(name: 'totalAmountCents')
   int get totalAmountCents;
@@ -649,11 +733,19 @@ abstract class _Invoice implements Invoice {
   @InvoiceStatusConverter()
   InvoiceStatus get status;
   @override
-  String get createdAt;
+  DateTime get createdAt;
   @override
-  String get updatedAt;
+  DateTime get updatedAt;
   @override
   List<InvoiceItem> get items;
+  @override
+  String get deliveryAddress;
+  @override
+  String get deliveryNote;
+  @override
+  bool get isDeleted;
+  @override
+  DateTime? get deletedAt;
 
   /// Create a copy of Invoice
   /// with the given fields replaced by the non-null parameter values.

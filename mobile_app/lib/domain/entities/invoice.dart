@@ -10,6 +10,7 @@ enum InvoiceStatus {
   unpaid,
   partiallyPaid,
   paid,
+  cancelled,
 }
 
 @freezed
@@ -33,13 +34,17 @@ class Invoice with _$Invoice {
     required String id,
     required String customerId,
     required String customerName,
-    required String invoiceDate,
+    required DateTime invoiceDate,
     @JsonKey(name: 'totalAmountCents') required int totalAmountCents,
-  @JsonKey(name: 'paidAmountCents') @Default(0) int paidAmountCents,
+    @JsonKey(name: 'paidAmountCents') @Default(0) int paidAmountCents,
     @InvoiceStatusConverter() required InvoiceStatus status,
-    required String createdAt,
-    required String updatedAt,
+    required DateTime createdAt,
+    required DateTime updatedAt,
     @Default([]) List<InvoiceItem> items,
+    @Default('') String deliveryAddress,
+    @Default('') String deliveryNote,
+    @Default(false) bool isDeleted,
+    DateTime? deletedAt,
   }) = _Invoice;
 
   factory Invoice.fromJson(Map<String, dynamic> json) => _$InvoiceFromJson(json);

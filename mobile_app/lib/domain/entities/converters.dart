@@ -10,6 +10,7 @@ class InvoiceStatusConverter implements JsonConverter<InvoiceStatus, String> {
   InvoiceStatus fromJson(String json) => switch (json) {
         'paid' => InvoiceStatus.paid,
         'partially_paid' => InvoiceStatus.partiallyPaid,
+        'cancelled' => InvoiceStatus.cancelled,
         _ => InvoiceStatus.unpaid,
       };
 
@@ -18,6 +19,7 @@ class InvoiceStatusConverter implements JsonConverter<InvoiceStatus, String> {
         InvoiceStatus.paid => 'paid',
         InvoiceStatus.partiallyPaid => 'partially_paid',
         InvoiceStatus.unpaid => 'unpaid',
+        InvoiceStatus.cancelled => 'cancelled',
       };
 }
 

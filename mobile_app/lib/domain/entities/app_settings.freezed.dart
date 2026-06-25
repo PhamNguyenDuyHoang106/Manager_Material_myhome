@@ -25,6 +25,10 @@ mixin _$AppSettings {
   String get storePhone => throw _privateConstructorUsedError;
   String get logoUrl => throw _privateConstructorUsedError;
   String get logoLocalPath => throw _privateConstructorUsedError;
+  double get truckVolume => throw _privateConstructorUsedError;
+  DateTime? get lastBackupTime => throw _privateConstructorUsedError;
+  int get lastBackupSizeBytes => throw _privateConstructorUsedError;
+  String get lastBackupStatus => throw _privateConstructorUsedError;
 
   /// Serializes this AppSettings to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -47,7 +51,11 @@ abstract class $AppSettingsCopyWith<$Res> {
       String storeAddress,
       String storePhone,
       String logoUrl,
-      String logoLocalPath});
+      String logoLocalPath,
+      double truckVolume,
+      DateTime? lastBackupTime,
+      int lastBackupSizeBytes,
+      String lastBackupStatus});
 }
 
 /// @nodoc
@@ -70,6 +78,10 @@ class _$AppSettingsCopyWithImpl<$Res, $Val extends AppSettings>
     Object? storePhone = null,
     Object? logoUrl = null,
     Object? logoLocalPath = null,
+    Object? truckVolume = null,
+    Object? lastBackupTime = freezed,
+    Object? lastBackupSizeBytes = null,
+    Object? lastBackupStatus = null,
   }) {
     return _then(_value.copyWith(
       storeName: null == storeName
@@ -92,6 +104,22 @@ class _$AppSettingsCopyWithImpl<$Res, $Val extends AppSettings>
           ? _value.logoLocalPath
           : logoLocalPath // ignore: cast_nullable_to_non_nullable
               as String,
+      truckVolume: null == truckVolume
+          ? _value.truckVolume
+          : truckVolume // ignore: cast_nullable_to_non_nullable
+              as double,
+      lastBackupTime: freezed == lastBackupTime
+          ? _value.lastBackupTime
+          : lastBackupTime // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      lastBackupSizeBytes: null == lastBackupSizeBytes
+          ? _value.lastBackupSizeBytes
+          : lastBackupSizeBytes // ignore: cast_nullable_to_non_nullable
+              as int,
+      lastBackupStatus: null == lastBackupStatus
+          ? _value.lastBackupStatus
+          : lastBackupStatus // ignore: cast_nullable_to_non_nullable
+              as String,
     ) as $Val);
   }
 }
@@ -109,7 +137,11 @@ abstract class _$$AppSettingsImplCopyWith<$Res>
       String storeAddress,
       String storePhone,
       String logoUrl,
-      String logoLocalPath});
+      String logoLocalPath,
+      double truckVolume,
+      DateTime? lastBackupTime,
+      int lastBackupSizeBytes,
+      String lastBackupStatus});
 }
 
 /// @nodoc
@@ -130,6 +162,10 @@ class __$$AppSettingsImplCopyWithImpl<$Res>
     Object? storePhone = null,
     Object? logoUrl = null,
     Object? logoLocalPath = null,
+    Object? truckVolume = null,
+    Object? lastBackupTime = freezed,
+    Object? lastBackupSizeBytes = null,
+    Object? lastBackupStatus = null,
   }) {
     return _then(_$AppSettingsImpl(
       storeName: null == storeName
@@ -152,6 +188,22 @@ class __$$AppSettingsImplCopyWithImpl<$Res>
           ? _value.logoLocalPath
           : logoLocalPath // ignore: cast_nullable_to_non_nullable
               as String,
+      truckVolume: null == truckVolume
+          ? _value.truckVolume
+          : truckVolume // ignore: cast_nullable_to_non_nullable
+              as double,
+      lastBackupTime: freezed == lastBackupTime
+          ? _value.lastBackupTime
+          : lastBackupTime // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      lastBackupSizeBytes: null == lastBackupSizeBytes
+          ? _value.lastBackupSizeBytes
+          : lastBackupSizeBytes // ignore: cast_nullable_to_non_nullable
+              as int,
+      lastBackupStatus: null == lastBackupStatus
+          ? _value.lastBackupStatus
+          : lastBackupStatus // ignore: cast_nullable_to_non_nullable
+              as String,
     ));
   }
 }
@@ -164,7 +216,11 @@ class _$AppSettingsImpl implements _AppSettings {
       this.storeAddress = '',
       this.storePhone = '',
       this.logoUrl = '',
-      this.logoLocalPath = ''});
+      this.logoLocalPath = '',
+      this.truckVolume = 4.0,
+      this.lastBackupTime,
+      this.lastBackupSizeBytes = 0,
+      this.lastBackupStatus = ''});
 
   factory _$AppSettingsImpl.fromJson(Map<String, dynamic> json) =>
       _$$AppSettingsImplFromJson(json);
@@ -184,10 +240,21 @@ class _$AppSettingsImpl implements _AppSettings {
   @override
   @JsonKey()
   final String logoLocalPath;
+  @override
+  @JsonKey()
+  final double truckVolume;
+  @override
+  final DateTime? lastBackupTime;
+  @override
+  @JsonKey()
+  final int lastBackupSizeBytes;
+  @override
+  @JsonKey()
+  final String lastBackupStatus;
 
   @override
   String toString() {
-    return 'AppSettings(storeName: $storeName, storeAddress: $storeAddress, storePhone: $storePhone, logoUrl: $logoUrl, logoLocalPath: $logoLocalPath)';
+    return 'AppSettings(storeName: $storeName, storeAddress: $storeAddress, storePhone: $storePhone, logoUrl: $logoUrl, logoLocalPath: $logoLocalPath, truckVolume: $truckVolume, lastBackupTime: $lastBackupTime, lastBackupSizeBytes: $lastBackupSizeBytes, lastBackupStatus: $lastBackupStatus)';
   }
 
   @override
@@ -203,13 +270,30 @@ class _$AppSettingsImpl implements _AppSettings {
                 other.storePhone == storePhone) &&
             (identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl) &&
             (identical(other.logoLocalPath, logoLocalPath) ||
-                other.logoLocalPath == logoLocalPath));
+                other.logoLocalPath == logoLocalPath) &&
+            (identical(other.truckVolume, truckVolume) ||
+                other.truckVolume == truckVolume) &&
+            (identical(other.lastBackupTime, lastBackupTime) ||
+                other.lastBackupTime == lastBackupTime) &&
+            (identical(other.lastBackupSizeBytes, lastBackupSizeBytes) ||
+                other.lastBackupSizeBytes == lastBackupSizeBytes) &&
+            (identical(other.lastBackupStatus, lastBackupStatus) ||
+                other.lastBackupStatus == lastBackupStatus));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(
-      runtimeType, storeName, storeAddress, storePhone, logoUrl, logoLocalPath);
+      runtimeType,
+      storeName,
+      storeAddress,
+      storePhone,
+      logoUrl,
+      logoLocalPath,
+      truckVolume,
+      lastBackupTime,
+      lastBackupSizeBytes,
+      lastBackupStatus);
 
   /// Create a copy of AppSettings
   /// with the given fields replaced by the non-null parameter values.
@@ -233,7 +317,11 @@ abstract class _AppSettings implements AppSettings {
       final String storeAddress,
       final String storePhone,
       final String logoUrl,
-      final String logoLocalPath}) = _$AppSettingsImpl;
+      final String logoLocalPath,
+      final double truckVolume,
+      final DateTime? lastBackupTime,
+      final int lastBackupSizeBytes,
+      final String lastBackupStatus}) = _$AppSettingsImpl;
 
   factory _AppSettings.fromJson(Map<String, dynamic> json) =
       _$AppSettingsImpl.fromJson;
@@ -248,6 +336,14 @@ abstract class _AppSettings implements AppSettings {
   String get logoUrl;
   @override
   String get logoLocalPath;
+  @override
+  double get truckVolume;
+  @override
+  DateTime? get lastBackupTime;
+  @override
+  int get lastBackupSizeBytes;
+  @override
+  String get lastBackupStatus;
 
   /// Create a copy of AppSettings
   /// with the given fields replaced by the non-null parameter values.

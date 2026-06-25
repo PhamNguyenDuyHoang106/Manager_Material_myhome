@@ -17,6 +17,7 @@ class InvoiceExportService {
     required Invoice invoice,
     required AppSettings settings,
     Uint8List? logoBytes,
+    int? customerDebtCents,
   }) async {
     final pdf = pw.Document();
     final theme = await PdfGoogleFonts.notoSansRegular();
@@ -53,13 +54,17 @@ class InvoiceExportService {
                 children: [
                   pw.Text('HÓA ĐƠN BÁN HÀNG', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
                   pw.Text('Mã: ${invoice.id.substring(0, 8).toUpperCase()}'),
-                  pw.Text('Ngày: ${AppDateUtils.formatDisplay(invoice.invoiceDate)}'),
+                  pw.Text('Ngày: ${AppDateUtils.formatDisplay(invoice.invoiceDate.toIso8601String().substring(0, 10))}'),
                 ],
               ),
             ],
           ),
           pw.SizedBox(height: 24),
           pw.Text('Khách hàng: ${invoice.customerName}', style: const pw.TextStyle(fontSize: 12)),
+          if (invoice.deliveryAddress.isNotEmpty)
+            pw.Text('Địa chỉ giao hàng: ${invoice.deliveryAddress}', style: const pw.TextStyle(fontSize: 11)),
+          if (invoice.deliveryNote.isNotEmpty)
+            pw.Text('Chỉ dẫn giao hàng: ${invoice.deliveryNote}', style: pw.TextStyle(fontSize: 11, fontStyle: pw.FontStyle.italic)),
           pw.SizedBox(height: 16),
           pw.TableHelper.fromTextArray(
             headers: ['Vật liệu', 'ĐVT', 'SL', 'Đơn giá', 'Thành tiền'],
@@ -87,7 +92,10 @@ class InvoiceExportService {
                 pw.Text('Tổng cộng: ${MoneyUtils.format(invoice.totalAmountCents)}',
                     style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
                 pw.Text('Đã thanh toán: ${MoneyUtils.format(invoice.paidAmountCents)}'),
-                pw.Text('Còn nợ: ${MoneyUtils.format(invoice.remainingCents)}'),
+                pw.Text('Còn nợ hóa đơn: ${MoneyUtils.format(invoice.remainingCents)}'),
+                if (customerDebtCents != null)
+                  pw.Text('Tổng nợ hiện tại của khách: ${MoneyUtils.format(customerDebtCents)}',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
                 pw.Text('Trạng thái: ${_statusLabel(invoice.status)}'),
               ],
             ),
@@ -105,14 +113,21 @@ class InvoiceExportService {
         InvoiceStatus.paid => 'Đã thanh toán',
         InvoiceStatus.partiallyPaid => 'Thanh toán một phần',
         InvoiceStatus.unpaid => 'Chưa thanh toán',
+        InvoiceStatus.cancelled => 'Đã hủy',
       };
 
   Future<String> saveAndShare({
     required Invoice invoice,
     required AppSettings settings,
     Uint8List? logoBytes,
+    int? customerDebtCents,
   }) async {
-    final bytes = await buildPdfBytes(invoice: invoice, settings: settings, logoBytes: logoBytes);
+    final bytes = await buildPdfBytes(
+      invoice: invoice, 
+      settings: settings, 
+      logoBytes: logoBytes,
+      customerDebtCents: customerDebtCents,
+    );
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/invoice_${invoice.id}.pdf');
     await file.writeAsBytes(bytes);
@@ -127,8 +142,14 @@ class InvoiceExportService {
     required Invoice invoice,
     required AppSettings settings,
     Uint8List? logoBytes,
+    int? customerDebtCents,
   }) async {
-    final bytes = await buildPdfBytes(invoice: invoice, settings: settings, logoBytes: logoBytes);
+    final bytes = await buildPdfBytes(
+      invoice: invoice, 
+      settings: settings, 
+      logoBytes: logoBytes,
+      customerDebtCents: customerDebtCents,
+    );
     await Printing.layoutPdf(onLayout: (_) async => bytes);
   }
 }

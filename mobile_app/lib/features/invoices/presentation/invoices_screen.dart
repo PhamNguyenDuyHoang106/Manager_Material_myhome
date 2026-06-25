@@ -95,5 +95,6 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
         InvoiceStatus.paid => 'Đã TT',
         InvoiceStatus.partiallyPaid => 'TT một phần',
         InvoiceStatus.unpaid => 'Chưa TT',
+        InvoiceStatus.cancelled => 'Đã hủy',
       };
 }

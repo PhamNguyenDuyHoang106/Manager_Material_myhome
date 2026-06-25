@@ -13,6 +13,12 @@ _$AppSettingsImpl _$$AppSettingsImplFromJson(Map<String, dynamic> json) =>
       storePhone: json['storePhone'] as String? ?? '',
       logoUrl: json['logoUrl'] as String? ?? '',
       logoLocalPath: json['logoLocalPath'] as String? ?? '',
+      truckVolume: (json['truckVolume'] as num?)?.toDouble() ?? 4.0,
+      lastBackupTime: json['lastBackupTime'] == null
+          ? null
+          : DateTime.parse(json['lastBackupTime'] as String),
+      lastBackupSizeBytes: (json['lastBackupSizeBytes'] as num?)?.toInt() ?? 0,
+      lastBackupStatus: json['lastBackupStatus'] as String? ?? '',
     );
 
 Map<String, dynamic> _$$AppSettingsImplToJson(_$AppSettingsImpl instance) =>
@@ -22,4 +28,8 @@ Map<String, dynamic> _$$AppSettingsImplToJson(_$AppSettingsImpl instance) =>
       'storePhone': instance.storePhone,
       'logoUrl': instance.logoUrl,
       'logoLocalPath': instance.logoLocalPath,
+      'truckVolume': instance.truckVolume,
+      'lastBackupTime': instance.lastBackupTime?.toIso8601String(),
+      'lastBackupSizeBytes': instance.lastBackupSizeBytes,
+      'lastBackupStatus': instance.lastBackupStatus,
     };

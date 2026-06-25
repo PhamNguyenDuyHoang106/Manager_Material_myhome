@@ -5,12 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../../application/providers/providers.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/customers/presentation/customers_screen.dart';
+import '../../features/customers/presentation/customer_detail_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/inventory/presentation/inventory_screen.dart';
 import '../../features/invoices/presentation/invoice_detail_screen.dart';
 import '../../features/invoices/presentation/invoices_screen.dart';
 import '../../features/materials/presentation/materials_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
+import '../../features/settings/presentation/backup_restore_screen.dart';
 import '../../features/shell/presentation/main_shell_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -41,7 +43,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           StatefulShellBranch(
             routes: [
-              GoRoute(path: '/customers', builder: (_, __) => const CustomersScreen()),
+              GoRoute(
+                path: '/customers',
+                builder: (_, __) => const CustomersScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (_, state) => CustomerDetailScreen(customerId: state.pathParameters['id']!),
+                  ),
+                ],
+              ),
             ],
           ),
           StatefulShellBranch(
@@ -70,7 +81,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           StatefulShellBranch(
             routes: [
-              GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+              GoRoute(
+                path: '/settings',
+                builder: (_, __) => const SettingsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'backup',
+                    builder: (_, __) => const BackupRestoreScreen(),
+                  ),
+                ],
+              ),
             ],
           ),
         ],

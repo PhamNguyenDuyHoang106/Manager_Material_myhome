@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../application/providers/providers.dart';
 import '../../../core/utils/money_utils.dart';
@@ -77,9 +78,13 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                       child: ListTile(
                         leading: CircleAvatar(child: Text(c.name.isNotEmpty ? c.name[0].toUpperCase() : '?')),
                         title: Text(c.name),
-                        subtitle: Text('${c.phone}\n${c.address}', maxLines: 2, overflow: TextOverflow.ellipsis),
+                        subtitle: Text(
+                          '${c.phone}\n${c.address}${c.note.isNotEmpty ? '\n📝 Ghi chú: ${c.note}' : ''}',
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         isThreeLine: true,
-                        onTap: () => _showDetail(context, c),
+                        onTap: () => context.push('/customers/${c.id}'),
                         trailing: PopupMenuButton(
                           itemBuilder: (_) => [
                             const PopupMenuItem(value: 'edit', child: Text('Sửa')),
@@ -106,6 +111,8 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
     final name = TextEditingController(text: customer?.name ?? '');
     final phone = TextEditingController(text: customer?.phone ?? '');
     final address = TextEditingController(text: customer?.address ?? '');
+    final defaultNote = TextEditingController(text: customer?.defaultNote ?? '');
+    final note = TextEditingController(text: customer?.note ?? '');
 
     await showDialog(
       context: context,
@@ -117,7 +124,21 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
             children: [
               TextField(controller: name, decoration: const InputDecoration(labelText: 'Tên *')),
               TextField(controller: phone, decoration: const InputDecoration(labelText: 'SĐT')),
-              TextField(controller: address, decoration: const InputDecoration(labelText: 'Địa chỉ')),
+              TextField(controller: address, decoration: const InputDecoration(labelText: 'Địa chỉ mặc định')),
+              TextField(
+                controller: defaultNote,
+                decoration: const InputDecoration(
+                  labelText: 'Chỉ dẫn giao hàng mặc định',
+                  hintText: 'Ví dụ: Ngõ thứ 2 bên trái',
+                ),
+              ),
+              TextField(
+                controller: note,
+                decoration: const InputDecoration(
+                  labelText: 'Ghi chú khách hàng',
+                  hintText: 'Ví dụ: Khách quen, trả tiền cuối tháng',
+                ),
+              ),
             ],
           ),
         ),
@@ -134,12 +155,16 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                     name: name.text.trim(),
                     phone: phone.text.trim(),
                     address: address.text.trim(),
+                    defaultNote: defaultNote.text.trim(),
+                    note: note.text.trim(),
                   );
                 } else {
                   await repo.updateCustomer(customer.copyWith(
                     name: name.text.trim(),
                     phone: phone.text.trim(),
                     address: address.text.trim(),
+                    defaultNote: defaultNote.text.trim(),
+                    note: note.text.trim(),
                   ));
                 }
                 if (ctx.mounted) Navigator.pop(ctx);
@@ -154,31 +179,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
     );
   }
 
-  Future<void> _showDetail(BuildContext context, Customer customer) async {
-    final repo = ref.read(customerRepositoryProvider);
-    if (repo == null) return;
-    final summary = await repo.getCustomerSummary(customer.id);
-    if (!context.mounted) return;
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(customer.name, style: Theme.of(ctx).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            Text('Tổng nợ: ${MoneyUtils.format(summary.totalDebtCents)}',
-                style: TextStyle(color: Theme.of(ctx).colorScheme.error, fontWeight: FontWeight.bold)),
-            Text('Hóa đơn: ${summary.invoiceCount}'),
-            Text('Thanh toán: ${summary.paymentCount}'),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   Future<void> _deleteCustomer(BuildContext context, Customer customer) async {
     final ok = await showConfirmDialog(

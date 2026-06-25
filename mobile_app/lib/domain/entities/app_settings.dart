@@ -11,6 +11,10 @@ class AppSettings with _$AppSettings {
     @Default('') String storePhone,
     @Default('') String logoUrl,
     @Default('') String logoLocalPath,
+    @Default(4.0) double truckVolume,
+    DateTime? lastBackupTime,
+    @Default(0) int lastBackupSizeBytes,
+    @Default('') String lastBackupStatus,
   }) = _AppSettings;
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => _$AppSettingsFromJson(json);

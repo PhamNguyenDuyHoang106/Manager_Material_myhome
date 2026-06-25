@@ -68,6 +68,9 @@ class FirestoreMaterialRepository implements MaterialRepository {
     required String unit,
     required int importPriceCents,
     required int sellingPriceCents,
+    required String categoryId,
+    required String categoryName,
+    required double minimumStock,
   }) async {
     final now = DateTime.now().toIso8601String();
     await _col.doc(_uuid.v4()).set({
@@ -79,6 +82,9 @@ class FirestoreMaterialRepository implements MaterialRepository {
       'isDeleted': false,
       'createdAt': now,
       'updatedAt': now,
+      'categoryId': categoryId,
+      'categoryName': categoryName,
+      'minimumStock': minimumStock,
     });
   }
 
@@ -90,14 +96,19 @@ class FirestoreMaterialRepository implements MaterialRepository {
       'defaultImportPriceCents': material.defaultImportPriceCents,
       'defaultSellingPriceCents': material.defaultSellingPriceCents,
       'updatedAt': DateTime.now().toIso8601String(),
+      'categoryId': material.categoryId,
+      'categoryName': material.categoryName,
+      'minimumStock': material.minimumStock,
     });
   }
 
   @override
   Future<void> deleteMaterial(String id) async {
+    final now = DateTime.now().toIso8601String();
     await _col.doc(id).update({
       'isDeleted': true,
-      'updatedAt': DateTime.now().toIso8601String(),
+      'deletedAt': now,
+      'updatedAt': now,
     });
   }
 

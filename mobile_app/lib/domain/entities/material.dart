@@ -13,8 +13,12 @@ class StockMaterial with _$StockMaterial {
     @JsonKey(name: 'defaultSellingPriceCents') required int defaultSellingPriceCents,
     @JsonKey(name: 'currentStock') required double currentStock,
     @Default(false) bool isDeleted,
-    required String createdAt,
-    required String updatedAt,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    @Default('') String categoryId,
+    @Default('Khác') String categoryName,
+    @Default(10.0) double minimumStock,
+    DateTime? deletedAt,
   }) = _StockMaterial;
 
   factory StockMaterial.fromJson(Map<String, dynamic> json) => _$StockMaterialFromJson(json);

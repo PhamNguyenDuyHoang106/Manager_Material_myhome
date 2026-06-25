@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/errors/app_exception.dart';
+import '../../domain/entities/customer_ledger_entry.dart';
 import '../../domain/entities/invoice.dart';
 import '../../domain/entities/payment.dart';
 import '../../domain/repositories/payment_repository.dart';
@@ -21,6 +22,7 @@ class FirestorePaymentRepository implements PaymentRepository {
         InvoiceStatus.unpaid => 'unpaid',
         InvoiceStatus.partiallyPaid => 'partially_paid',
         InvoiceStatus.paid => 'paid',
+        InvoiceStatus.cancelled => 'cancelled',
       };
 
   @override
@@ -28,9 +30,14 @@ class FirestorePaymentRepository implements PaymentRepository {
     required String invoiceId,
     required String customerId,
     required int amountCents,
-    required String paymentDate,
+    required DateTime paymentDate,
+    String? attachmentUrl,
   }) async {
     if (amountCents <= 0) throw const ValidationException('Số tiền phải lớn hơn 0');
+
+    final now = DateTime.now().toIso8601String();
+    final paymentId = _uuid.v4();
+    final paymentDateStr = paymentDate.toIso8601String();
 
     await _firestore.runTransaction((txn) async {
       final invoiceRef = _firestore.collection(_paths.invoices).doc(invoiceId);
@@ -51,18 +58,47 @@ class FirestorePaymentRepository implements PaymentRepository {
               ? InvoiceStatus.partiallyPaid
               : InvoiceStatus.unpaid;
 
-      txn.set(_firestore.collection(_paths.payments).doc(_uuid.v4()), {
+      // 1. Save payment doc
+      txn.set(_firestore.collection(_paths.payments).doc(paymentId), {
         'invoiceId': invoiceId,
         'customerId': customerId,
         'amountCents': amountCents,
-        'paymentDate': paymentDate,
-        'createdAt': DateTime.now().toIso8601String(),
+        'paymentDate': paymentDateStr,
+        'createdAt': now,
+        'attachmentUrl': attachmentUrl ?? '',
+        'isDeleted': false,
       });
 
+      // 2. Update invoice paid amount
       txn.update(invoiceRef, {
         'paidAmountCents': newPaid,
         'status': _statusToString(status),
-        'updatedAt': DateTime.now().toIso8601String(),
+        'updatedAt': now,
+      });
+
+      // 3. Update customer cache
+      final customerRef = _firestore.collection(_paths.customers).doc(customerId);
+      final custSnap = await txn.get(customerRef);
+      final currentDebt = custSnap.data()?['currentDebtCacheCents'] as int? ?? 0;
+      final newDebt = currentDebt - amountCents;
+      txn.update(customerRef, {
+        'currentDebtCacheCents': newDebt,
+        'updatedAt': now,
+      });
+
+      // 4. Create ledger payment entry
+      final ledgerRef = _firestore.collection(_paths.ledger(customerId)).doc(paymentId);
+      txn.set(ledgerRef, {
+        'customerId': customerId,
+        'invoiceId': invoiceId,
+        'paymentId': paymentId,
+        'date': paymentDateStr,
+        'type': 'payment',
+        'description': 'Khách trả tiền',
+        'amountCents': amountCents,
+        'createdAt': now,
+        'attachmentUrl': attachmentUrl ?? '',
+        'items': <Map<String, dynamic>>[],
       });
     });
   }
@@ -72,6 +108,7 @@ class FirestorePaymentRepository implements PaymentRepository {
     final snap = await _firestore
         .collection(_paths.payments)
         .where('customerId', isEqualTo: customerId)
+        .where('isDeleted', isEqualTo: false)
         .orderBy('createdAt', descending: true)
         .get();
     return snap.docs.map((d) => Payment.fromJson(fromFirestore(d))).toList();
@@ -82,8 +119,75 @@ class FirestorePaymentRepository implements PaymentRepository {
     final snap = await _firestore
         .collection(_paths.payments)
         .where('invoiceId', isEqualTo: invoiceId)
+        .where('isDeleted', isEqualTo: false)
         .orderBy('createdAt', descending: true)
         .get();
     return snap.docs.map((d) => Payment.fromJson(fromFirestore(d))).toList();
+  }
+
+  @override
+  Future<void> deletePayment(String id) async {
+    final doc = await _firestore.collection(_paths.payments).doc(id).get();
+    if (!doc.exists) throw const ValidationException('Phiếu thanh toán không tồn tại');
+    final data = fromFirestore(doc);
+    final payment = Payment.fromJson(data);
+    if (payment.isDeleted) return;
+
+    final now = DateTime.now().toIso8601String();
+    final today = now.substring(0, 10);
+
+    await _firestore.runTransaction((txn) async {
+      final invoiceRef = _firestore.collection(_paths.invoices).doc(payment.invoiceId);
+      final invoiceSnap = await txn.get(invoiceRef);
+      if (!invoiceSnap.exists) throw const ValidationException('Hóa đơn liên quan không tồn tại');
+
+      final total = invoiceSnap.data()!['totalAmountCents'] as int;
+      final paid = invoiceSnap.data()!['paidAmountCents'] as int? ?? 0;
+      final newPaid = paid - payment.amountCents;
+      final status = newPaid >= total
+          ? InvoiceStatus.paid
+          : newPaid > 0
+              ? InvoiceStatus.partiallyPaid
+              : InvoiceStatus.unpaid;
+
+      // 1. Mark payment as deleted
+      txn.update(_firestore.collection(_paths.payments).doc(id), {
+        'isDeleted': true,
+        'deletedAt': now,
+        'updatedAt': now,
+      });
+
+      // 2. Update invoice paid amount & status
+      txn.update(invoiceRef, {
+        'paidAmountCents': newPaid,
+        'status': _statusToString(status),
+        'updatedAt': now,
+      });
+
+      // 3. Update customer cache (adding back the deleted payment amount to the debt)
+      final customerRef = _firestore.collection(_paths.customers).doc(payment.customerId);
+      final custSnap = await txn.get(customerRef);
+      final currentDebt = custSnap.data()?['currentDebtCacheCents'] as int? ?? 0;
+      final newDebt = currentDebt + payment.amountCents;
+      txn.update(customerRef, {
+        'currentDebtCacheCents': newDebt,
+        'updatedAt': now,
+      });
+
+      // 4. Create ledger paymentReversal entry
+      final ledgerRef = _firestore.collection(_paths.ledger(payment.customerId)).doc(_uuid.v4());
+      txn.set(ledgerRef, {
+        'customerId': payment.customerId,
+        'invoiceId': payment.invoiceId,
+        'paymentId': payment.id,
+        'date': today,
+        'type': 'paymentReversal',
+        'description': 'Hoàn tác thanh toán #${payment.id.substring(0, 8).toUpperCase()}',
+        'amountCents': payment.amountCents,
+        'createdAt': now,
+        'attachmentUrl': '',
+        'items': <Map<String, dynamic>>[],
+      });
+    });
   }
 }

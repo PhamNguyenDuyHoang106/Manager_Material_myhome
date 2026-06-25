@@ -6,16 +6,21 @@ abstract class InvoiceRepository {
   Future<Invoice?> getInvoice(String id);
   Future<String> createInvoice({
     required String customerId,
-    required String invoiceDate,
+    required DateTime invoiceDate,
     required List<InvoiceItemInput> items,
+    required String deliveryAddress,
+    required String deliveryNote,
   });
   Future<void> updateInvoice({
     required String invoiceId,
     required String customerId,
-    required String invoiceDate,
+    required DateTime invoiceDate,
     required List<InvoiceItemInput> items,
+    required String deliveryAddress,
+    required String deliveryNote,
   });
-  Future<void> deleteInvoice(String invoiceId);
+  Future<void> cancelInvoice(String invoiceId);
+  Future<void> deleteInvoice(String id);
 }
 
 class InvoiceItemInput {

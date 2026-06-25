@@ -32,6 +32,16 @@ class HiveCache {
     return list.cast<Map<String, dynamic>>();
   }
 
+  Future<void> saveString(String boxName, String key, String value) async {
+    final box = Hive.box<String>(boxName);
+    await box.put(key, value);
+  }
+
+  String? loadString(String boxName, String key) {
+    final box = Hive.box<String>(boxName);
+    return box.get(key);
+  }
+
   String get customersBox => _customersBox;
   String get materialsBox => _materialsBox;
   String get invoicesBox => _invoicesBox;

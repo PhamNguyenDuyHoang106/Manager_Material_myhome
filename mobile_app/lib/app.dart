@@ -4,12 +4,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'config/router/app_router.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
+import 'application/providers/providers.dart';
 
 class MaterialManagerApp extends ConsumerWidget {
   const MaterialManagerApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen<String?>(currentUserIdProvider, (previous, next) {
+      if (next != null) {
+        final backupService = ref.read(backupServiceProvider);
+        backupService?.checkAndPerformDailyBackup(next);
+      }
+    });
+
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,

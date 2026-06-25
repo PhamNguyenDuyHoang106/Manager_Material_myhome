@@ -11,8 +11,12 @@ class Customer with _$Customer {
     required String phone,
     required String address,
     @Default(false) bool isDeleted,
-    required String createdAt,
-    required String updatedAt,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    @Default('') String defaultNote,
+    @Default('') String note,
+    @Default(0) int currentDebtCacheCents,
+    DateTime? deletedAt,
   }) = _Customer;
 
   factory Customer.fromJson(Map<String, dynamic> json) => _$CustomerFromJson(json);

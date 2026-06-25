@@ -9,6 +9,9 @@ abstract class MaterialRepository {
     required String unit,
     required int importPriceCents,
     required int sellingPriceCents,
+    required String categoryId,
+    required String categoryName,
+    required double minimumStock,
   });
   Future<void> updateMaterial(StockMaterial material);
   Future<void> deleteMaterial(String id);

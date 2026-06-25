@@ -33,16 +33,22 @@ _$InvoiceImpl _$$InvoiceImplFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String,
       customerId: json['customerId'] as String,
       customerName: json['customerName'] as String,
-      invoiceDate: json['invoiceDate'] as String,
+      invoiceDate: DateTime.parse(json['invoiceDate'] as String),
       totalAmountCents: (json['totalAmountCents'] as num).toInt(),
       paidAmountCents: (json['paidAmountCents'] as num?)?.toInt() ?? 0,
       status: const InvoiceStatusConverter().fromJson(json['status'] as String),
-      createdAt: json['createdAt'] as String,
-      updatedAt: json['updatedAt'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
       items: (json['items'] as List<dynamic>?)
               ?.map((e) => InvoiceItem.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      deliveryAddress: json['deliveryAddress'] as String? ?? '',
+      deliveryNote: json['deliveryNote'] as String? ?? '',
+      isDeleted: json['isDeleted'] as bool? ?? false,
+      deletedAt: json['deletedAt'] == null
+          ? null
+          : DateTime.parse(json['deletedAt'] as String),
     );
 
 Map<String, dynamic> _$$InvoiceImplToJson(_$InvoiceImpl instance) =>
@@ -50,17 +56,22 @@ Map<String, dynamic> _$$InvoiceImplToJson(_$InvoiceImpl instance) =>
       'id': instance.id,
       'customerId': instance.customerId,
       'customerName': instance.customerName,
-      'invoiceDate': instance.invoiceDate,
+      'invoiceDate': instance.invoiceDate.toIso8601String(),
       'totalAmountCents': instance.totalAmountCents,
       'paidAmountCents': instance.paidAmountCents,
       'status': const InvoiceStatusConverter().toJson(instance.status),
-      'createdAt': instance.createdAt,
-      'updatedAt': instance.updatedAt,
+      'createdAt': instance.createdAt.toIso8601String(),
+      'updatedAt': instance.updatedAt.toIso8601String(),
       'items': instance.items.map((e) => e.toJson()).toList(),
+      'deliveryAddress': instance.deliveryAddress,
+      'deliveryNote': instance.deliveryNote,
+      'isDeleted': instance.isDeleted,
+      'deletedAt': instance.deletedAt?.toIso8601String(),
     };
 
 const _$InvoiceStatusEnumMap = {
   InvoiceStatus.unpaid: 'unpaid',
   InvoiceStatus.partiallyPaid: 'partiallyPaid',
   InvoiceStatus.paid: 'paid',
+  InvoiceStatus.cancelled: 'cancelled',
 };

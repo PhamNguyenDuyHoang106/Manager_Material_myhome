@@ -1,378 +1,518 @@
-# Construction Materials Manager
+# VLXD Manager
 
-Production-oriented mobile + backend system for a private construction materials business.
+Ứng dụng Flutter quản lý cửa hàng vật liệu xây dựng gia đình.
 
-## Tech Stack
+## Mục tiêu dự án
 
-- Mobile: Flutter
-- Backend: Node.js + Express
-- Database: PostgreSQL
-- Money strategy: Store monetary values as integer cents (`BIGINT`) for financial precision
-- Offline mode: SQLite (`sqflite`) + sync queue
+Ứng dụng được xây dựng để thay thế hoàn toàn việc ghi chép thủ công trong cửa hàng vật liệu xây dựng quy mô hộ gia đình.
 
-## Project Structure
+Đối tượng sử dụng chính:
+
+* Chủ cửa hàng lớn tuổi
+* Không rành công nghệ
+* Cần thao tác đơn giản
+* Yêu cầu dữ liệu công nợ chính xác tuyệt đối
+* Không được mất dữ liệu khi đổi máy hoặc hỏng điện thoại
+
+---
+
+# Công nghệ sử dụng
+
+## Frontend
+
+* Flutter
+* Riverpod
+* GoRouter
+* Freezed
+* Json Serializable
+
+## Backend
+
+* Firebase Authentication
+* Cloud Firestore
+* Firebase Storage
+
+## Local Storage
+
+* Hive
+
+---
+
+# Kiến trúc dự án
+
+Áp dụng Clean Architecture:
 
 ```text
-.
-|-- backend
-|   |-- migrations
-|   |   `-- 001_init.sql
-|   |-- src
-|   |   |-- app.js
-|   |   |-- server.js
-|   |   |-- config/db.js
-|   |   |-- middlewares/errorHandler.js
-|   |   |-- routes/index.js
-|   |   |-- utils
-|   |   |   |-- money.js
-|   |   |   `-- runMigration.js
-|   |   `-- modules
-|   |       |-- dashboard/dashboard.routes.js
-|   |       |-- customers/customer.routes.js
-|   |       |-- materials/material.routes.js
-|   |       |-- imports/import.routes.js
-|   |       |-- invoices/invoice.routes.js
-|   |       |-- payments/payment.routes.js
-|   |       |-- ops/ops.routes.js
-|   |       `-- reports/report.routes.js
-|   |-- scripts
-|   |   |-- backup.js
-|   |   `-- restore.js
-|   `-- package.json
-|-- mobile_app
-|   |-- pubspec.yaml
-|   `-- lib
-|       |-- main.dart
-|       |-- core/local/local_db.dart
-|       |-- core/sync/sync_service.dart
-|       |-- core/network/api_client.dart
-|       `-- features
-|           |-- dashboard/presentation/dashboard_screen.dart
-|           |-- customers/presentation/customers_screen.dart
-|           |-- invoices/presentation/invoices_screen.dart
-|           |-- inventory/presentation/inventory_screen.dart
-|           `-- settings/presentation/settings_screen.dart
-`-- README.md
+lib/
+├── application/
+├── config/
+├── data/
+├── domain/
+├── features/
+└── shared/
 ```
 
-## Database Schema (Required Tables)
+### Domain
 
-Implemented in:
-- `backend/migrations/001_init.sql`
-- `backend/migrations/002_reliability_upgrade.sql`
-- `backend/migrations/003_offline_hardening.sql`
-- `backend/migrations/004_enterprise_safety.sql`
+Chứa:
 
-- `customers(id, name, phone, address, created_at, updated_at)`
-- `materials(id, name, unit, default_import_price_cents, default_selling_price_cents, current_stock, created_at, updated_at)`
-- `imports(id, material_id, quantity, import_price_cents, imported_at, created_at)`
-- `invoices(id, customer_id, invoice_date, total_amount_cents, status, immutable, created_at)`
-- `invoice_items(id, invoice_id, material_id, quantity, selling_price_cents, line_total_cents)`
-- `payments(id, invoice_id, amount_cents, payment_date, created_at)`
-- `audit_logs(id, action, entity_type, entity_id, metadata, created_at)`
-- `invoices.client_id (UUID UNIQUE), invoices.updated_at`
-- `payments.client_id (UUID UNIQUE), payments.updated_at`
-- `customers.is_deleted`
-- `materials.is_deleted`
-- `daily_snapshots(id, snapshot_date, total_revenue_cents, total_debt_cents, total_stock_value_cents, created_at)`
-- `migrations_history(id, migration_name, status, started_at, finished_at, error_message)`
-- `system_state(state_key, state_value, updated_at)`
+* Entities
+* Repository Contracts
+* Business Services
 
-### Relationships
+### Data
 
-- `imports.material_id -> materials.id`
-- `invoices.customer_id -> customers.id`
-- `invoice_items.invoice_id -> invoices.id`
-- `invoice_items.material_id -> materials.id`
-- `payments.invoice_id -> invoices.id`
+Chứa:
 
-### Indexes
+* Firestore Repositories
+* Firebase Datasources
+* Hive Cache
 
-- `idx_customers_name`
-- `idx_invoices_customer_id`
-- `idx_invoices_invoice_date`
-- `idx_invoices_status`
-- `idx_invoice_items_invoice_id`
-- `idx_payments_invoice_id`
-- `idx_imports_material_id`
-- `idx_audit_logs_entity`
-- `idx_audit_logs_created_at`
-- `idx_invoices_customer_date`
-- `idx_payments_payment_date`
-- `idx_imports_imported_at`
+### Presentation
 
-## Core Business Rules Implemented
+Chứa:
 
-1. Invoice immutability:
-   - No update/delete endpoint for invoices or invoice items.
-   - `selling_price_cents` persisted on each invoice item at creation time.
-2. Debt accuracy:
-   - Partial payments supported.
-   - Overpayment blocked at API layer.
-   - Invoice status auto-updated (`unpaid` -> `partially_paid` -> `paid`).
-3. Inventory consistency:
-   - Imports add stock.
-   - Invoice creation checks stock and deducts stock.
-   - Operations are wrapped in DB transactions.
-4. Merged unpaid invoices:
-   - Virtual grouping endpoint; original invoices remain unchanged.
-5. Audit logging:
-   - Automatically records `CREATE_INVOICE`, `ADD_PAYMENT`, `IMPORT_MATERIAL`, `UPDATE_CUSTOMER`, `UPDATE_MATERIAL`.
-6. Offline and sync:
-   - Mobile writes pending invoice/payment actions to local queue.
-   - Auto-sync retries when connectivity is available.
-   - Server remains source of truth.
+* Screens
+* Widgets
+* ViewModels
+* Providers
 
-## REST API Design
+---
 
-Base URL: `/api`
+# Nguyên tắc dữ liệu quan trọng
 
-### Customers
-- `GET /customers`
-- `POST /customers`
-- `PUT /customers/:id`
-- `DELETE /customers/:id`
-- `GET /customers/:id/details` (invoices + payment history + total debt)
+## Single Source Of Truth
 
-### Materials
-- `GET /materials`
-- `POST /materials`
-- `PUT /materials/:id`
-- `DELETE /materials/:id`
+Nguồn dữ liệu công nợ duy nhất là:
 
-### Inventory (Imports)
-- `GET /imports`
-- `POST /imports`
+CustomerLedgerEntry
 
-### Invoices
-- `GET /invoices?q=&from=&to=&status=&page=&page_size=` (search/filter + pagination)
-- `GET /invoices/:id`
-- `POST /invoices` (immutable creation only)
-- `GET /invoices/:id/export.png` (invoice image export)
-- `GET /invoices/:id/export.pdf` (printable PDF)
+Không lưu Running Balance trong Firestore.
 
-### Payments
-- `POST /payments`
-- `GET /payments?page=&page_size=`
+Dư nợ được tính động từ Ledger.
 
-### Debt and Merged Unpaid
-- `GET /reports/customers/:customerId/debt`
-- `GET /reports/customers/:customerId/merged-unpaid?page=&page_size=`
-
-### Dashboard
-- `GET /dashboard/summary` (total unpaid debt, unpaid invoices, revenue today, revenue month)
-
-### Incremental Sync and Idempotency
-- `GET /sync?updated_since=<ISO_TIMESTAMP>` returns changed rows only.
-- `POST /invoices` now requires `client_id` UUID for idempotent create.
-- `POST /payments` now requires `client_id` UUID for idempotent create.
-- if duplicate `client_id` is retried, server returns existing record and does not insert duplicate.
-
-### Enterprise Health & Safety
-- `GET /health` returns database status, last sync, pending queue count, last backup time.
-- `GET /health/data-consistency` returns last consistency job output.
-- `GET /health/data-consistency?run_now=true` forces immediate validation run.
-
-### Backup/Restore
-- `POST /ops/backup`
-- `npm run backup`
-- `npm run restore -- <path-to-backup.sql>`
-
-## Required Example Flows
-
-### 1) Create Invoice
-
-`POST /api/invoices`
-
-```json
-{
-  "customer_id": 1,
-  "date": "2026-04-26",
-  "items": [
-    {
-      "material_id": 2,
-      "quantity": 5.5,
-      "selling_price_at_that_time": 42.75
-    }
-  ]
-}
+```text
+Debt = SUM(amountCents)
 ```
 
-### 2) Add Payment (Partial Allowed)
+---
 
-`POST /api/payments`
+## Debt Cache
 
-```json
-{
-  "invoice_id": 10,
-  "amount": 50.0,
-  "payment_date": "2026-04-27"
-}
+Customer có trường:
+
+```dart
+currentDebtCacheCents
 ```
 
-### 3) Calculate Debt
+Mục đích:
 
-- Invoice remaining debt:
-  - `invoice.total_amount_cents - sum(payments.amount_cents)`
-- Customer total debt:
-  - `sum(customer invoices total_amount_cents) - sum(all payments for customer invoices)`
+* Hiển thị nhanh
+* Dashboard
+* Danh sách khách hàng
 
-Use: `GET /api/reports/customers/:customerId/debt`
+Nếu cache lệch:
 
-## Flutter UI/UX Coverage
-
-Tabs implemented:
-- Dashboard
-- Customers
-- Invoices
-- Inventory
-- Settings
-
-Each main screen includes list view and add/detail interaction.
-
-Additional enhancements:
-- Customer autocomplete in invoice create form.
-- Fast numeric keyboard for quantity/price/amount.
-- Loading indicator, empty state, and safer offline fallback.
-- Local caching of customers/materials/invoices/payments.
-- Offline queue for `CREATE_INVOICE`, `ADD_PAYMENT` with retry sync.
-
-## Run Instructions
-
-## 1. Database
-
-Create DB:
-
-```sql
-CREATE DATABASE material_manager;
+```text
+Ledger luôn đúng
+Cache được tính lại
 ```
 
-## 2. Backend
+---
+
+## Immutable Ledger
+
+Không xóa lịch sử công nợ.
+
+Mọi thay đổi đều sinh Ledger mới.
+
+Ví dụ:
+
+### Bán hàng
+
+```text
+Ledger Type = sale
+```
+
+### Thanh toán
+
+```text
+Ledger Type = payment
+```
+
+### Hủy hóa đơn
+
+```text
+Ledger Type = cancellation
+```
+
+### Hủy thanh toán
+
+```text
+Ledger Type = paymentReversal
+```
+
+Nguyên tắc:
+
+```text
+Không xóa Ledger
+Không sửa Ledger cũ
+Chỉ ghi thêm Ledger mới
+```
+
+---
+
+# Chức năng chính
+
+## 1. Quản lý vật liệu
+
+* Danh mục vật liệu
+* Nhóm vật liệu động
+* Cảnh báo tồn kho tối thiểu
+* Theo dõi nhập xuất tồn
+
+---
+
+## 2. Quản lý khách hàng
+
+* Danh sách khách hàng
+* Địa chỉ mặc định
+* Ghi chú chỉ đường mặc định
+* Công nợ hiện tại
+
+---
+
+## 3. Hóa đơn bán hàng
+
+Hỗ trợ:
+
+* Khối
+* Xe
+
+Quy đổi:
+
+```text
+Xe → Khối
+```
+
+Thông qua:
+
+```dart
+AppSettings.truckVolume
+```
+
+---
+
+## 4. Công nợ khách hàng
+
+Sổ nợ điện tử dạng Ledger.
+
+Hiển thị:
+
+* Ngày
+* Nội dung
+* Phát sinh
+* Dư nợ lũy kế
+
+Cho phép:
+
+* Tìm kiếm
+* Lọc loại giao dịch
+* Xuất PDF
+
+---
+
+## 5. Thanh toán
+
+Hỗ trợ:
+
+* Thu tiền mặt
+* Chuyển khoản
+
+Đính kèm:
+
+* Ảnh biên nhận
+* Ảnh chuyển khoản
+
+Lưu trên Firebase Storage.
+
+---
+
+## 6. Cảnh báo nợ quá hạn
+
+Tiêu chí:
+
+```text
+Invoice > 30 ngày
+Và còn dư nợ
+```
+
+Hiển thị trên Dashboard.
+
+---
+
+# Soft Delete
+
+Áp dụng cho:
+
+* Customer
+* Material
+* Invoice
+* Payment
+
+Nguyên tắc:
+
+```text
+Không xóa vật lý
+```
+
+Thay vào đó:
+
+```dart
+isDeleted = true
+deletedAt = timestamp
+```
+
+Mọi truy vấn mặc định phải loại bỏ dữ liệu đã xóa mềm.
+
+---
+
+# Backup & Restore
+
+## Mục tiêu
+
+Không mất dữ liệu khi:
+
+* Hỏng điện thoại
+* Đổi điện thoại
+* Cài lại ứng dụng
+
+---
+
+## Auto Backup
+
+Khi ứng dụng mở lần đầu trong ngày:
+
+```text
+Kiểm tra ngày backup gần nhất
+Nếu chưa backup hôm nay:
+    Tự động backup
+```
+
+Backup chạy nền.
+
+---
+
+## Manual Backup
+
+Đường dẫn:
+
+```text
+Cài đặt
+→ Sao lưu & Khôi phục
+→ Tạo bản sao lưu ngay
+```
+
+---
+
+## Định dạng Backup
+
+```text
+backup_YYYY_MM_DD_HH_mm_ss.zip
+```
+
+Bên trong:
+
+```text
+backup.json
+```
+
+Bao gồm:
+
+* Categories
+* Materials
+* Customers
+* Invoices
+* Payments
+* Ledger
+* Settings
+
+---
+
+## Checksum
+
+Sử dụng:
+
+```text
+SHA256
+```
+
+Quy trình Restore:
+
+```text
+Giải nén
+↓
+Đọc JSON
+↓
+Kiểm tra SHA256
+↓
+Restore
+```
+
+Nếu checksum sai:
+
+```text
+Dừng Restore
+```
+
+---
+
+## Retention Policy
+
+Giữ tối đa:
+
+```text
+30 bản backup gần nhất
+```
+
+Các bản cũ hơn sẽ tự động xóa.
+
+---
+
+# Restore
+
+## Merge
+
+An toàn nhất.
+
+Quy tắc:
+
+```text
+Nếu document tồn tại:
+    So sánh updatedAt
+    Chỉ ghi đè nếu backup mới hơn
+```
+
+Có thể chạy nhiều lần.
+
+(Idempotent)
+
+---
+
+## Replace
+
+Xóa dữ liệu hiện tại và khôi phục hoàn toàn.
+
+Yêu cầu:
+
+1. Xác nhận lần 1
+2. Xác nhận lần 2
+3. Nhập:
+
+```text
+XAC_NHAN_RESTORE
+```
+
+---
+
+# Firebase Collections
+
+```text
+users/{uid}
+├── app_settings
+├── customers
+├── customer_ledger
+├── invoices
+├── payments
+├── materials
+├── material_categories
+└── inventory_transactions
+```
+
+---
+
+# Quy tắc nghiệp vụ quan trọng
+
+## Hủy hóa đơn
+
+Chỉ được hủy khi:
+
+```text
+paidAmountCents == 0
+```
+
+Nếu đã phát sinh thanh toán:
+
+```text
+Không cho phép hủy
+```
+
+---
+
+## Hủy thanh toán
+
+Không được xóa Ledger cũ.
+
+Phải sinh:
+
+```text
+LedgerEntryType.paymentReversal
+```
+
+Để cộng nợ trở lại.
+
+---
+
+# Unit Tests bắt buộc
+
+Các nghiệp vụ cần test:
+
+* Ledger Calculation
+* Debt Cache Recalculation
+* Invoice Cancellation
+* Payment Reversal
+* Overdue Debt
+* Backup ZIP
+* Backup Checksum
+* Restore Merge
+* Restore Replace
+
+---
+
+# Build Production
+
+Android:
 
 ```bash
-cd backend
-cp .env.example .env
-npm install
-npm run migrate
-npm run dev
-```
-
-Backend default: `http://localhost:4000`
-
-## 3. Flutter Mobile
-
-```bash
-cd mobile_app
 flutter pub get
-flutter run
+dart run build_runner build --delete-conflicting-outputs
+flutter build appbundle --release
 ```
 
-If using Android emulator, API URL in `main.dart` is already set to `http://10.0.2.2:4000/api`.
+Output:
 
-## 4. Backup and Restore operations
-
-```bash
-cd backend
-npm run backup
-npm run restore -- backups/backup-YYYY-MM-DDTHH-mm-ss-sssZ.sql
+```text
+build/app/outputs/bundle/release/app-release.aab
 ```
 
-For scheduled backups (recommended): run `npm run backup` daily using OS task scheduler/cron.
+Upload lên Google Play Console.
 
-## 5. Audit log verification examples
+---
 
-- Create invoice -> one row in `audit_logs` with action `CREATE_INVOICE`
-- Add payment -> one row with action `ADD_PAYMENT`
-- Import material -> one row with action `IMPORT_MATERIAL`
-- Update customer/material -> one row with corresponding update action
+# Roadmap tương lai
 
-```sql
-SELECT action, entity_type, entity_id, metadata, created_at
-FROM audit_logs
-ORDER BY created_at DESC
-LIMIT 20;
-```
+Ưu tiên cao:
 
-## 6. Idempotency request example
+* Google Play Internal Testing
+* Firebase Crashlytics
+* Firebase Analytics
+* Cloud Scheduled Backup
+* Multi User (Nhân viên)
+* Audit Log
+* Excel Export
 
-```json
-POST /api/invoices
-{
-  "client_id": "2efdb4e4-407e-4f43-9d36-d4eec8313c0d",
-  "customer_id": 1,
-  "date": "2026-04-26",
-  "items": [
-    { "material_id": 2, "quantity": 3.0, "selling_price_at_that_time": 10.5 }
-  ]
-}
-```
+---
 
-On retry with same `client_id`, API returns the same invoice row instead of creating a duplicate.
+# Tác giả
 
-## 7. Background jobs and schedule
-
-Scheduled in `backend/src/jobs/scheduler.js`:
-- `0 1 * * *`: daily PostgreSQL backup
-- `10 1 * * *`: daily financial snapshot
-- `*/30 * * * *`: data consistency validation
-- startup: immediate consistency check
-
-### Data consistency validation checks
-- invoice total mismatch (`invoices.total_amount_cents` vs sum of `invoice_items.line_total_cents`)
-- invoice status mismatch (`unpaid` / `partially_paid` / `paid` vs actual payments)
-- stock mismatch (`materials.current_stock` vs imports minus sold quantities)
-- negative customer debt anomalies
-
-On mismatch, logs `DATA_INCONSISTENCY` into `audit_logs`.
-
-## 8. Automatic backup retention policy
-
-- Backups saved under `backend/backups/`
-- Old backups automatically deleted; only latest 30 files kept
-- Last backup metadata persisted in `system_state` (`state_key = 'last_backup'`)
-
-## 9. Safe migration strategy
-
-`backend/src/utils/runMigration.js` now:
-- creates/uses `migrations_history`
-- skips already successful migrations
-- records `running/success/failed` per migration file
-- stores failure message for diagnosis
-
-## 10. Example structured logs
-
-```json
-{"timestamp":"2026-04-27T00:00:00.000Z","level":"INFO","message":"daily_backup started","metadata":{}}
-{"timestamp":"2026-04-27T00:00:05.000Z","level":"WARNING","message":"Sync retry attempt received","metadata":{"retry":3}}
-{"timestamp":"2026-04-27T00:01:00.000Z","level":"ERROR","message":"Data consistency check failed","metadata":{"error":"relation does not exist"}}
-```
-
-## 11. Integration steps for enterprise safety layer
-
-1. Install new dependencies:
-```bash
-cd backend
-npm install
-```
-2. Apply migrations:
-```bash
-npm run migrate
-```
-3. Start server (scheduler auto-starts):
-```bash
-npm run dev
-```
-4. Verify health:
-```bash
-curl http://localhost:4000/api/health
-curl http://localhost:4000/api/health/data-consistency
-```
-
-## Production Hardening Checklist
-
-- Add auth (JWT + role-based permissions).
-- Move route logic into dedicated service/repository layers per module.
-- Add migration versioning tool (e.g. Prisma Migrate/Flyway/Knex).
-- Add automated tests (unit + integration + API contract).
-- Add audit logs (financial operations trail).
-- Set up backups and restore drills for long-term retention.
+Dự án được phát triển để phục vụ hoạt động kinh doanh của gia đình và tối ưu hóa việc quản lý công nợ, kho hàng và hóa đơn trong cửa hàng vật liệu xây dựng.

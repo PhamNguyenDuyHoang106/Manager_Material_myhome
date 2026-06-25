@@ -30,8 +30,12 @@ mixin _$StockMaterial {
   @JsonKey(name: 'currentStock')
   double get currentStock => throw _privateConstructorUsedError;
   bool get isDeleted => throw _privateConstructorUsedError;
-  String get createdAt => throw _privateConstructorUsedError;
-  String get updatedAt => throw _privateConstructorUsedError;
+  DateTime get createdAt => throw _privateConstructorUsedError;
+  DateTime get updatedAt => throw _privateConstructorUsedError;
+  String get categoryId => throw _privateConstructorUsedError;
+  String get categoryName => throw _privateConstructorUsedError;
+  double get minimumStock => throw _privateConstructorUsedError;
+  DateTime? get deletedAt => throw _privateConstructorUsedError;
 
   /// Serializes this StockMaterial to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -57,8 +61,12 @@ abstract class $StockMaterialCopyWith<$Res> {
       @JsonKey(name: 'defaultSellingPriceCents') int defaultSellingPriceCents,
       @JsonKey(name: 'currentStock') double currentStock,
       bool isDeleted,
-      String createdAt,
-      String updatedAt});
+      DateTime createdAt,
+      DateTime updatedAt,
+      String categoryId,
+      String categoryName,
+      double minimumStock,
+      DateTime? deletedAt});
 }
 
 /// @nodoc
@@ -85,6 +93,10 @@ class _$StockMaterialCopyWithImpl<$Res, $Val extends StockMaterial>
     Object? isDeleted = null,
     Object? createdAt = null,
     Object? updatedAt = null,
+    Object? categoryId = null,
+    Object? categoryName = null,
+    Object? minimumStock = null,
+    Object? deletedAt = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -118,11 +130,27 @@ class _$StockMaterialCopyWithImpl<$Res, $Val extends StockMaterial>
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
-              as String,
+              as DateTime,
       updatedAt: null == updatedAt
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      categoryId: null == categoryId
+          ? _value.categoryId
+          : categoryId // ignore: cast_nullable_to_non_nullable
               as String,
+      categoryName: null == categoryName
+          ? _value.categoryName
+          : categoryName // ignore: cast_nullable_to_non_nullable
+              as String,
+      minimumStock: null == minimumStock
+          ? _value.minimumStock
+          : minimumStock // ignore: cast_nullable_to_non_nullable
+              as double,
+      deletedAt: freezed == deletedAt
+          ? _value.deletedAt
+          : deletedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ) as $Val);
   }
 }
@@ -143,8 +171,12 @@ abstract class _$$StockMaterialImplCopyWith<$Res>
       @JsonKey(name: 'defaultSellingPriceCents') int defaultSellingPriceCents,
       @JsonKey(name: 'currentStock') double currentStock,
       bool isDeleted,
-      String createdAt,
-      String updatedAt});
+      DateTime createdAt,
+      DateTime updatedAt,
+      String categoryId,
+      String categoryName,
+      double minimumStock,
+      DateTime? deletedAt});
 }
 
 /// @nodoc
@@ -169,6 +201,10 @@ class __$$StockMaterialImplCopyWithImpl<$Res>
     Object? isDeleted = null,
     Object? createdAt = null,
     Object? updatedAt = null,
+    Object? categoryId = null,
+    Object? categoryName = null,
+    Object? minimumStock = null,
+    Object? deletedAt = freezed,
   }) {
     return _then(_$StockMaterialImpl(
       id: null == id
@@ -202,11 +238,27 @@ class __$$StockMaterialImplCopyWithImpl<$Res>
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
-              as String,
+              as DateTime,
       updatedAt: null == updatedAt
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      categoryId: null == categoryId
+          ? _value.categoryId
+          : categoryId // ignore: cast_nullable_to_non_nullable
               as String,
+      categoryName: null == categoryName
+          ? _value.categoryName
+          : categoryName // ignore: cast_nullable_to_non_nullable
+              as String,
+      minimumStock: null == minimumStock
+          ? _value.minimumStock
+          : minimumStock // ignore: cast_nullable_to_non_nullable
+              as double,
+      deletedAt: freezed == deletedAt
+          ? _value.deletedAt
+          : deletedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ));
   }
 }
@@ -225,7 +277,11 @@ class _$StockMaterialImpl implements _StockMaterial {
       @JsonKey(name: 'currentStock') required this.currentStock,
       this.isDeleted = false,
       required this.createdAt,
-      required this.updatedAt});
+      required this.updatedAt,
+      this.categoryId = '',
+      this.categoryName = 'Khác',
+      this.minimumStock = 10.0,
+      this.deletedAt});
 
   factory _$StockMaterialImpl.fromJson(Map<String, dynamic> json) =>
       _$$StockMaterialImplFromJson(json);
@@ -249,13 +305,24 @@ class _$StockMaterialImpl implements _StockMaterial {
   @JsonKey()
   final bool isDeleted;
   @override
-  final String createdAt;
+  final DateTime createdAt;
   @override
-  final String updatedAt;
+  final DateTime updatedAt;
+  @override
+  @JsonKey()
+  final String categoryId;
+  @override
+  @JsonKey()
+  final String categoryName;
+  @override
+  @JsonKey()
+  final double minimumStock;
+  @override
+  final DateTime? deletedAt;
 
   @override
   String toString() {
-    return 'StockMaterial(id: $id, name: $name, unit: $unit, defaultImportPriceCents: $defaultImportPriceCents, defaultSellingPriceCents: $defaultSellingPriceCents, currentStock: $currentStock, isDeleted: $isDeleted, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'StockMaterial(id: $id, name: $name, unit: $unit, defaultImportPriceCents: $defaultImportPriceCents, defaultSellingPriceCents: $defaultSellingPriceCents, currentStock: $currentStock, isDeleted: $isDeleted, createdAt: $createdAt, updatedAt: $updatedAt, categoryId: $categoryId, categoryName: $categoryName, minimumStock: $minimumStock, deletedAt: $deletedAt)';
   }
 
   @override
@@ -279,7 +346,15 @@ class _$StockMaterialImpl implements _StockMaterial {
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
-                other.updatedAt == updatedAt));
+                other.updatedAt == updatedAt) &&
+            (identical(other.categoryId, categoryId) ||
+                other.categoryId == categoryId) &&
+            (identical(other.categoryName, categoryName) ||
+                other.categoryName == categoryName) &&
+            (identical(other.minimumStock, minimumStock) ||
+                other.minimumStock == minimumStock) &&
+            (identical(other.deletedAt, deletedAt) ||
+                other.deletedAt == deletedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -294,7 +369,11 @@ class _$StockMaterialImpl implements _StockMaterial {
       currentStock,
       isDeleted,
       createdAt,
-      updatedAt);
+      updatedAt,
+      categoryId,
+      categoryName,
+      minimumStock,
+      deletedAt);
 
   /// Create a copy of StockMaterial
   /// with the given fields replaced by the non-null parameter values.
@@ -323,8 +402,12 @@ abstract class _StockMaterial implements StockMaterial {
       required final int defaultSellingPriceCents,
       @JsonKey(name: 'currentStock') required final double currentStock,
       final bool isDeleted,
-      required final String createdAt,
-      required final String updatedAt}) = _$StockMaterialImpl;
+      required final DateTime createdAt,
+      required final DateTime updatedAt,
+      final String categoryId,
+      final String categoryName,
+      final double minimumStock,
+      final DateTime? deletedAt}) = _$StockMaterialImpl;
 
   factory _StockMaterial.fromJson(Map<String, dynamic> json) =
       _$StockMaterialImpl.fromJson;
@@ -347,9 +430,17 @@ abstract class _StockMaterial implements StockMaterial {
   @override
   bool get isDeleted;
   @override
-  String get createdAt;
+  DateTime get createdAt;
   @override
-  String get updatedAt;
+  DateTime get updatedAt;
+  @override
+  String get categoryId;
+  @override
+  String get categoryName;
+  @override
+  double get minimumStock;
+  @override
+  DateTime? get deletedAt;
 
   /// Create a copy of StockMaterial
   /// with the given fields replaced by the non-null parameter values.

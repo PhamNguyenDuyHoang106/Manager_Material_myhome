@@ -25,8 +25,11 @@ mixin _$Payment {
   String get customerId => throw _privateConstructorUsedError;
   @JsonKey(name: 'amountCents')
   int get amountCents => throw _privateConstructorUsedError;
-  String get paymentDate => throw _privateConstructorUsedError;
-  String get createdAt => throw _privateConstructorUsedError;
+  DateTime get paymentDate => throw _privateConstructorUsedError;
+  DateTime get createdAt => throw _privateConstructorUsedError;
+  String get attachmentUrl => throw _privateConstructorUsedError;
+  bool get isDeleted => throw _privateConstructorUsedError;
+  DateTime? get deletedAt => throw _privateConstructorUsedError;
 
   /// Serializes this Payment to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -47,8 +50,11 @@ abstract class $PaymentCopyWith<$Res> {
       String invoiceId,
       String customerId,
       @JsonKey(name: 'amountCents') int amountCents,
-      String paymentDate,
-      String createdAt});
+      DateTime paymentDate,
+      DateTime createdAt,
+      String attachmentUrl,
+      bool isDeleted,
+      DateTime? deletedAt});
 }
 
 /// @nodoc
@@ -72,6 +78,9 @@ class _$PaymentCopyWithImpl<$Res, $Val extends Payment>
     Object? amountCents = null,
     Object? paymentDate = null,
     Object? createdAt = null,
+    Object? attachmentUrl = null,
+    Object? isDeleted = null,
+    Object? deletedAt = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -93,11 +102,23 @@ class _$PaymentCopyWithImpl<$Res, $Val extends Payment>
       paymentDate: null == paymentDate
           ? _value.paymentDate
           : paymentDate // ignore: cast_nullable_to_non_nullable
-              as String,
+              as DateTime,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      attachmentUrl: null == attachmentUrl
+          ? _value.attachmentUrl
+          : attachmentUrl // ignore: cast_nullable_to_non_nullable
               as String,
+      isDeleted: null == isDeleted
+          ? _value.isDeleted
+          : isDeleted // ignore: cast_nullable_to_non_nullable
+              as bool,
+      deletedAt: freezed == deletedAt
+          ? _value.deletedAt
+          : deletedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ) as $Val);
   }
 }
@@ -114,8 +135,11 @@ abstract class _$$PaymentImplCopyWith<$Res> implements $PaymentCopyWith<$Res> {
       String invoiceId,
       String customerId,
       @JsonKey(name: 'amountCents') int amountCents,
-      String paymentDate,
-      String createdAt});
+      DateTime paymentDate,
+      DateTime createdAt,
+      String attachmentUrl,
+      bool isDeleted,
+      DateTime? deletedAt});
 }
 
 /// @nodoc
@@ -137,6 +161,9 @@ class __$$PaymentImplCopyWithImpl<$Res>
     Object? amountCents = null,
     Object? paymentDate = null,
     Object? createdAt = null,
+    Object? attachmentUrl = null,
+    Object? isDeleted = null,
+    Object? deletedAt = freezed,
   }) {
     return _then(_$PaymentImpl(
       id: null == id
@@ -158,11 +185,23 @@ class __$$PaymentImplCopyWithImpl<$Res>
       paymentDate: null == paymentDate
           ? _value.paymentDate
           : paymentDate // ignore: cast_nullable_to_non_nullable
-              as String,
+              as DateTime,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      attachmentUrl: null == attachmentUrl
+          ? _value.attachmentUrl
+          : attachmentUrl // ignore: cast_nullable_to_non_nullable
               as String,
+      isDeleted: null == isDeleted
+          ? _value.isDeleted
+          : isDeleted // ignore: cast_nullable_to_non_nullable
+              as bool,
+      deletedAt: freezed == deletedAt
+          ? _value.deletedAt
+          : deletedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ));
   }
 }
@@ -176,7 +215,10 @@ class _$PaymentImpl implements _Payment {
       required this.customerId,
       @JsonKey(name: 'amountCents') required this.amountCents,
       required this.paymentDate,
-      required this.createdAt});
+      required this.createdAt,
+      this.attachmentUrl = '',
+      this.isDeleted = false,
+      this.deletedAt});
 
   factory _$PaymentImpl.fromJson(Map<String, dynamic> json) =>
       _$$PaymentImplFromJson(json);
@@ -191,13 +233,21 @@ class _$PaymentImpl implements _Payment {
   @JsonKey(name: 'amountCents')
   final int amountCents;
   @override
-  final String paymentDate;
+  final DateTime paymentDate;
   @override
-  final String createdAt;
+  final DateTime createdAt;
+  @override
+  @JsonKey()
+  final String attachmentUrl;
+  @override
+  @JsonKey()
+  final bool isDeleted;
+  @override
+  final DateTime? deletedAt;
 
   @override
   String toString() {
-    return 'Payment(id: $id, invoiceId: $invoiceId, customerId: $customerId, amountCents: $amountCents, paymentDate: $paymentDate, createdAt: $createdAt)';
+    return 'Payment(id: $id, invoiceId: $invoiceId, customerId: $customerId, amountCents: $amountCents, paymentDate: $paymentDate, createdAt: $createdAt, attachmentUrl: $attachmentUrl, isDeleted: $isDeleted, deletedAt: $deletedAt)';
   }
 
   @override
@@ -215,13 +265,19 @@ class _$PaymentImpl implements _Payment {
             (identical(other.paymentDate, paymentDate) ||
                 other.paymentDate == paymentDate) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.attachmentUrl, attachmentUrl) ||
+                other.attachmentUrl == attachmentUrl) &&
+            (identical(other.isDeleted, isDeleted) ||
+                other.isDeleted == isDeleted) &&
+            (identical(other.deletedAt, deletedAt) ||
+                other.deletedAt == deletedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(runtimeType, id, invoiceId, customerId,
-      amountCents, paymentDate, createdAt);
+      amountCents, paymentDate, createdAt, attachmentUrl, isDeleted, deletedAt);
 
   /// Create a copy of Payment
   /// with the given fields replaced by the non-null parameter values.
@@ -245,8 +301,11 @@ abstract class _Payment implements Payment {
       required final String invoiceId,
       required final String customerId,
       @JsonKey(name: 'amountCents') required final int amountCents,
-      required final String paymentDate,
-      required final String createdAt}) = _$PaymentImpl;
+      required final DateTime paymentDate,
+      required final DateTime createdAt,
+      final String attachmentUrl,
+      final bool isDeleted,
+      final DateTime? deletedAt}) = _$PaymentImpl;
 
   factory _Payment.fromJson(Map<String, dynamic> json) = _$PaymentImpl.fromJson;
 
@@ -260,9 +319,15 @@ abstract class _Payment implements Payment {
   @JsonKey(name: 'amountCents')
   int get amountCents;
   @override
-  String get paymentDate;
+  DateTime get paymentDate;
   @override
-  String get createdAt;
+  DateTime get createdAt;
+  @override
+  String get attachmentUrl;
+  @override
+  bool get isDeleted;
+  @override
+  DateTime? get deletedAt;
 
   /// Create a copy of Payment
   /// with the given fields replaced by the non-null parameter values.

@@ -8,6 +8,7 @@ class AppConstants {
   static String userCollection(String uid) => 'users/$uid';
   static String customersPath(String uid) => 'users/$uid/customers';
   static String materialsPath(String uid) => 'users/$uid/materials';
+  static String materialCategoriesPath(String uid) => 'users/$uid/material_categories';
   static String inventoryTxPath(String uid) => 'users/$uid/inventory_transactions';
   static String invoicesPath(String uid) => 'users/$uid/invoices';
   static String paymentsPath(String uid) => 'users/$uid/payments';

@@ -8,6 +8,7 @@ import '../../data/repositories/firestore_customer_repository.dart';
 import '../../data/repositories/firestore_dashboard_repository.dart';
 import '../../data/repositories/firestore_inventory_repository.dart';
 import '../../data/repositories/firestore_invoice_repository.dart';
+import '../../data/repositories/firestore_material_category_repository.dart';
 import '../../data/repositories/firestore_material_repository.dart';
 import '../../data/repositories/firestore_payment_repository.dart';
 import '../../data/repositories/firestore_settings_repository.dart';
@@ -16,9 +17,11 @@ import '../../domain/repositories/customer_repository.dart';
 import '../../domain/repositories/dashboard_repository.dart';
 import '../../domain/repositories/inventory_repository.dart';
 import '../../domain/repositories/invoice_repository.dart';
+import '../../domain/repositories/material_category_repository.dart';
 import '../../domain/repositories/material_repository.dart';
 import '../../domain/repositories/payment_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
+import '../../domain/services/backup_service.dart';
 
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) => FirebaseAuth.instance);
 final firestoreProvider = Provider<FirebaseFirestore>((ref) => FirebaseFirestore.instance);
@@ -46,6 +49,12 @@ final materialRepositoryProvider = Provider<MaterialRepository?>((ref) {
   final uid = ref.watch(currentUserIdProvider);
   if (uid == null) return null;
   return FirestoreMaterialRepository(ref.watch(firestoreProvider), uid);
+});
+
+final materialCategoryRepositoryProvider = Provider<MaterialCategoryRepository?>((ref) {
+  final uid = ref.watch(currentUserIdProvider);
+  if (uid == null) return null;
+  return FirestoreMaterialCategoryRepository(ref.watch(firestoreProvider), uid);
 });
 
 final inventoryRepositoryProvider = Provider<InventoryRepository?>((ref) {
@@ -104,6 +113,12 @@ final materialsStreamProvider = StreamProvider((ref) {
   return repo.watchMaterials();
 });
 
+final categoriesStreamProvider = StreamProvider((ref) {
+  final repo = ref.watch(materialCategoryRepositoryProvider);
+  if (repo == null) return const Stream.empty();
+  return repo.watchCategories();
+});
+
 final invoicesStreamProvider = StreamProvider.family((ref, String query) {
   final repo = ref.watch(invoiceRepositoryProvider);
   if (repo == null) return const Stream.empty();
@@ -126,4 +141,18 @@ final settingsStreamProvider = StreamProvider((ref) {
   final repo = ref.watch(settingsRepositoryProvider);
   if (repo == null) return const Stream.empty();
   return repo.watchSettings();
+});
+
+final customerLedgerStreamProvider = StreamProvider.family((ref, String customerId) {
+  final repo = ref.watch(customerRepositoryProvider);
+  if (repo == null) return const Stream.empty();
+  return repo.watchCustomerLedger(customerId);
+});
+
+final backupServiceProvider = Provider<BackupService?>((ref) {
+  final firestore = ref.watch(firestoreProvider);
+  final storage = ref.watch(firebaseStorageProvider);
+  final settingsRepo = ref.watch(settingsRepositoryProvider);
+  if (settingsRepo == null) return null;
+  return BackupService(firestore, storage, settingsRepo);
 });

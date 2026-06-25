@@ -16,8 +16,14 @@ _$StockMaterialImpl _$$StockMaterialImplFromJson(Map<String, dynamic> json) =>
           (json['defaultSellingPriceCents'] as num).toInt(),
       currentStock: (json['currentStock'] as num).toDouble(),
       isDeleted: json['isDeleted'] as bool? ?? false,
-      createdAt: json['createdAt'] as String,
-      updatedAt: json['updatedAt'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      categoryId: json['categoryId'] as String? ?? '',
+      categoryName: json['categoryName'] as String? ?? 'Khác',
+      minimumStock: (json['minimumStock'] as num?)?.toDouble() ?? 10.0,
+      deletedAt: json['deletedAt'] == null
+          ? null
+          : DateTime.parse(json['deletedAt'] as String),
     );
 
 Map<String, dynamic> _$$StockMaterialImplToJson(_$StockMaterialImpl instance) =>
@@ -29,6 +35,10 @@ Map<String, dynamic> _$$StockMaterialImplToJson(_$StockMaterialImpl instance) =>
       'defaultSellingPriceCents': instance.defaultSellingPriceCents,
       'currentStock': instance.currentStock,
       'isDeleted': instance.isDeleted,
-      'createdAt': instance.createdAt,
-      'updatedAt': instance.updatedAt,
+      'createdAt': instance.createdAt.toIso8601String(),
+      'updatedAt': instance.updatedAt.toIso8601String(),
+      'categoryId': instance.categoryId,
+      'categoryName': instance.categoryName,
+      'minimumStock': instance.minimumStock,
+      'deletedAt': instance.deletedAt?.toIso8601String(),
     };

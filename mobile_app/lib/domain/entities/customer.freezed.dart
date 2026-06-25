@@ -25,8 +25,12 @@ mixin _$Customer {
   String get phone => throw _privateConstructorUsedError;
   String get address => throw _privateConstructorUsedError;
   bool get isDeleted => throw _privateConstructorUsedError;
-  String get createdAt => throw _privateConstructorUsedError;
-  String get updatedAt => throw _privateConstructorUsedError;
+  DateTime get createdAt => throw _privateConstructorUsedError;
+  DateTime get updatedAt => throw _privateConstructorUsedError;
+  String get defaultNote => throw _privateConstructorUsedError;
+  String get note => throw _privateConstructorUsedError;
+  int get currentDebtCacheCents => throw _privateConstructorUsedError;
+  DateTime? get deletedAt => throw _privateConstructorUsedError;
 
   /// Serializes this Customer to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -49,8 +53,12 @@ abstract class $CustomerCopyWith<$Res> {
       String phone,
       String address,
       bool isDeleted,
-      String createdAt,
-      String updatedAt});
+      DateTime createdAt,
+      DateTime updatedAt,
+      String defaultNote,
+      String note,
+      int currentDebtCacheCents,
+      DateTime? deletedAt});
 }
 
 /// @nodoc
@@ -75,6 +83,10 @@ class _$CustomerCopyWithImpl<$Res, $Val extends Customer>
     Object? isDeleted = null,
     Object? createdAt = null,
     Object? updatedAt = null,
+    Object? defaultNote = null,
+    Object? note = null,
+    Object? currentDebtCacheCents = null,
+    Object? deletedAt = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -100,11 +112,27 @@ class _$CustomerCopyWithImpl<$Res, $Val extends Customer>
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
-              as String,
+              as DateTime,
       updatedAt: null == updatedAt
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      defaultNote: null == defaultNote
+          ? _value.defaultNote
+          : defaultNote // ignore: cast_nullable_to_non_nullable
               as String,
+      note: null == note
+          ? _value.note
+          : note // ignore: cast_nullable_to_non_nullable
+              as String,
+      currentDebtCacheCents: null == currentDebtCacheCents
+          ? _value.currentDebtCacheCents
+          : currentDebtCacheCents // ignore: cast_nullable_to_non_nullable
+              as int,
+      deletedAt: freezed == deletedAt
+          ? _value.deletedAt
+          : deletedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ) as $Val);
   }
 }
@@ -123,8 +151,12 @@ abstract class _$$CustomerImplCopyWith<$Res>
       String phone,
       String address,
       bool isDeleted,
-      String createdAt,
-      String updatedAt});
+      DateTime createdAt,
+      DateTime updatedAt,
+      String defaultNote,
+      String note,
+      int currentDebtCacheCents,
+      DateTime? deletedAt});
 }
 
 /// @nodoc
@@ -147,6 +179,10 @@ class __$$CustomerImplCopyWithImpl<$Res>
     Object? isDeleted = null,
     Object? createdAt = null,
     Object? updatedAt = null,
+    Object? defaultNote = null,
+    Object? note = null,
+    Object? currentDebtCacheCents = null,
+    Object? deletedAt = freezed,
   }) {
     return _then(_$CustomerImpl(
       id: null == id
@@ -172,11 +208,27 @@ class __$$CustomerImplCopyWithImpl<$Res>
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
-              as String,
+              as DateTime,
       updatedAt: null == updatedAt
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      defaultNote: null == defaultNote
+          ? _value.defaultNote
+          : defaultNote // ignore: cast_nullable_to_non_nullable
               as String,
+      note: null == note
+          ? _value.note
+          : note // ignore: cast_nullable_to_non_nullable
+              as String,
+      currentDebtCacheCents: null == currentDebtCacheCents
+          ? _value.currentDebtCacheCents
+          : currentDebtCacheCents // ignore: cast_nullable_to_non_nullable
+              as int,
+      deletedAt: freezed == deletedAt
+          ? _value.deletedAt
+          : deletedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ));
   }
 }
@@ -191,7 +243,11 @@ class _$CustomerImpl implements _Customer {
       required this.address,
       this.isDeleted = false,
       required this.createdAt,
-      required this.updatedAt});
+      required this.updatedAt,
+      this.defaultNote = '',
+      this.note = '',
+      this.currentDebtCacheCents = 0,
+      this.deletedAt});
 
   factory _$CustomerImpl.fromJson(Map<String, dynamic> json) =>
       _$$CustomerImplFromJson(json);
@@ -208,13 +264,24 @@ class _$CustomerImpl implements _Customer {
   @JsonKey()
   final bool isDeleted;
   @override
-  final String createdAt;
+  final DateTime createdAt;
   @override
-  final String updatedAt;
+  final DateTime updatedAt;
+  @override
+  @JsonKey()
+  final String defaultNote;
+  @override
+  @JsonKey()
+  final String note;
+  @override
+  @JsonKey()
+  final int currentDebtCacheCents;
+  @override
+  final DateTime? deletedAt;
 
   @override
   String toString() {
-    return 'Customer(id: $id, name: $name, phone: $phone, address: $address, isDeleted: $isDeleted, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Customer(id: $id, name: $name, phone: $phone, address: $address, isDeleted: $isDeleted, createdAt: $createdAt, updatedAt: $updatedAt, defaultNote: $defaultNote, note: $note, currentDebtCacheCents: $currentDebtCacheCents, deletedAt: $deletedAt)';
   }
 
   @override
@@ -231,13 +298,31 @@ class _$CustomerImpl implements _Customer {
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
-                other.updatedAt == updatedAt));
+                other.updatedAt == updatedAt) &&
+            (identical(other.defaultNote, defaultNote) ||
+                other.defaultNote == defaultNote) &&
+            (identical(other.note, note) || other.note == note) &&
+            (identical(other.currentDebtCacheCents, currentDebtCacheCents) ||
+                other.currentDebtCacheCents == currentDebtCacheCents) &&
+            (identical(other.deletedAt, deletedAt) ||
+                other.deletedAt == deletedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(
-      runtimeType, id, name, phone, address, isDeleted, createdAt, updatedAt);
+      runtimeType,
+      id,
+      name,
+      phone,
+      address,
+      isDeleted,
+      createdAt,
+      updatedAt,
+      defaultNote,
+      note,
+      currentDebtCacheCents,
+      deletedAt);
 
   /// Create a copy of Customer
   /// with the given fields replaced by the non-null parameter values.
@@ -262,8 +347,12 @@ abstract class _Customer implements Customer {
       required final String phone,
       required final String address,
       final bool isDeleted,
-      required final String createdAt,
-      required final String updatedAt}) = _$CustomerImpl;
+      required final DateTime createdAt,
+      required final DateTime updatedAt,
+      final String defaultNote,
+      final String note,
+      final int currentDebtCacheCents,
+      final DateTime? deletedAt}) = _$CustomerImpl;
 
   factory _Customer.fromJson(Map<String, dynamic> json) =
       _$CustomerImpl.fromJson;
@@ -279,9 +368,17 @@ abstract class _Customer implements Customer {
   @override
   bool get isDeleted;
   @override
-  String get createdAt;
+  DateTime get createdAt;
   @override
-  String get updatedAt;
+  DateTime get updatedAt;
+  @override
+  String get defaultNote;
+  @override
+  String get note;
+  @override
+  int get currentDebtCacheCents;
+  @override
+  DateTime? get deletedAt;
 
   /// Create a copy of Customer
   /// with the given fields replaced by the non-null parameter values.
