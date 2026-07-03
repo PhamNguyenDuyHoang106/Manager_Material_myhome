@@ -83,10 +83,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               const SizedBox(height: 16),
               Text('Thông tin cửa hàng', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               TextField(controller: _storeName, decoration: const InputDecoration(labelText: 'Tên cửa hàng')),
+              const SizedBox(height: 12),
               TextField(controller: _address, decoration: const InputDecoration(labelText: 'Địa chỉ')),
-              TextField(controller: _phone, decoration: const InputDecoration(labelText: 'SĐT')),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _phone,
+                keyboardType: TextInputType.text,
+                decoration: const InputDecoration(
+                  labelText: 'Số điện thoại',
+                  hintText: 'Nhập một hoặc nhiều số (ví dụ: 0914140566 - 0941709111)',
+                ),
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: _truckVolume,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -125,14 +135,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 icon: const Icon(Icons.logout),
                 label: const Text('Đăng xuất'),
               ),
-              const SizedBox(height: 16),
-              const Card(
-                child: ListTile(
-                  leading: Icon(Icons.cloud_done),
-                  title: Text('Đồng bộ Firebase'),
-                  subtitle: Text('Dữ liệu tự đồng bộ khi có mạng. Hoạt động offline với Firestore cache + Hive.'),
-                ),
-              ),
+
             ],
           );
         },

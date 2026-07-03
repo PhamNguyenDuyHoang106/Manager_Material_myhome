@@ -20,15 +20,34 @@ class InvoiceExportService {
     int? customerDebtCents,
   }) async {
     final pdf = pw.Document();
-    final theme = await PdfGoogleFonts.notoSansRegular();
+    
+    // Load Vietnamese fonts (Regular, Bold, Italic)
+    final regular = await PdfGoogleFonts.notoSansRegular();
+    final bold = await PdfGoogleFonts.notoSansBold();
+    final italic = await PdfGoogleFonts.notoSansItalic();
+    
+    final theme = pw.ThemeData.withFont(
+      base: regular,
+      bold: bold,
+      italic: italic,
+    );
+
+    // Sort items chronologically by delivery date (or invoice date if null)
+    final sortedItems = List<InvoiceItem>.from(invoice.items);
+    sortedItems.sort((a, b) {
+      final dateA = a.deliveryDate ?? invoice.invoiceDate;
+      final dateB = b.deliveryDate ?? invoice.invoiceDate;
+      return dateA.compareTo(dateB);
+    });
 
     pdf.addPage(
       pw.MultiPage(
         pageTheme: pw.PageTheme(
-          theme: pw.ThemeData.withFont(base: theme),
+          theme: theme,
           margin: const pw.EdgeInsets.all(32),
         ),
         build: (context) => [
+          // Store header (Full width stacked column)
           pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
@@ -38,42 +57,82 @@ class InvoiceExportService {
                   height: 64,
                   child: pw.Image(pw.MemoryImage(logoBytes), fit: pw.BoxFit.contain),
                 ),
-              pw.SizedBox(width: 16),
+              if (logoBytes != null) pw.SizedBox(width: 16),
               pw.Expanded(
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text(settings.storeName, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-                    if (settings.storeAddress.isNotEmpty) pw.Text(settings.storeAddress),
-                    if (settings.storePhone.isNotEmpty) pw.Text('ĐT: ${settings.storePhone}'),
+                    pw.Text(
+                      settings.storeName.isNotEmpty ? settings.storeName : 'Cửa hàng VLXD Hoàng Hạnh',
+                      style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+                    ),
+                    pw.SizedBox(height: 4),
+                    if (settings.storeAddress.isNotEmpty)
+                      pw.Text(settings.storeAddress),
+                    if (settings.storePhone.isNotEmpty)
+                      pw.Text('ĐT: ${settings.storePhone}'),
                   ],
                 ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 10),
+          pw.Divider(color: PdfColors.grey400),
+          pw.SizedBox(height: 10),
+
+          // Invoice Title section
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            children: [
+              pw.Text(
+                'HÓA ĐƠN BÁN HÀNG',
+                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
               ),
               pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.end,
                 children: [
-                  pw.Text('HÓA ĐƠN BÁN HÀNG', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                  pw.Text('Mã: ${invoice.id.substring(0, 8).toUpperCase()}'),
-                  pw.Text('Ngày: ${AppDateUtils.formatDisplay(invoice.invoiceDate.toIso8601String().substring(0, 10))}'),
+                  pw.Text('Mã: ${invoice.id.substring(0, 8).toUpperCase()}', style: const pw.TextStyle(fontSize: 10)),
+                  pw.Text('Ngày: ${AppDateUtils.formatDisplay(invoice.invoiceDate.toIso8601String().substring(0, 10))}', style: const pw.TextStyle(fontSize: 10)),
                 ],
               ),
             ],
           ),
-          pw.SizedBox(height: 24),
-          pw.Text('Khách hàng: ${invoice.customerName}', style: const pw.TextStyle(fontSize: 12)),
-          if (invoice.deliveryAddress.isNotEmpty)
-            pw.Text('Địa chỉ giao hàng: ${invoice.deliveryAddress}', style: const pw.TextStyle(fontSize: 11)),
-          if (invoice.deliveryNote.isNotEmpty)
-            pw.Text('Chỉ dẫn giao hàng: ${invoice.deliveryNote}', style: pw.TextStyle(fontSize: 11, fontStyle: pw.FontStyle.italic)),
           pw.SizedBox(height: 16),
+
+          // Customer Info section
+          pw.Container(
+            padding: const pw.EdgeInsets.all(8),
+            width: double.infinity,
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.grey300),
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('Khách hàng: ${invoice.customerName}', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                if (invoice.deliveryAddress.isNotEmpty)
+                  pw.Text('Địa chỉ giao hàng: ${invoice.deliveryAddress}', style: const pw.TextStyle(fontSize: 11)),
+                if (invoice.deliveryDirections.isNotEmpty)
+                  pw.Text('Chỉ đường: ${invoice.deliveryDirections}', style: pw.TextStyle(fontSize: 11, fontStyle: pw.FontStyle.italic)),
+                if (invoice.deliveryNote.isNotEmpty)
+                  pw.Text('Ghi chú: ${invoice.deliveryNote}', style: pw.TextStyle(fontSize: 11, fontStyle: pw.FontStyle.italic)),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 16),
+
+          // Items Table
           pw.TableHelper.fromTextArray(
-            headers: ['Vật liệu', 'ĐVT', 'SL', 'Đơn giá', 'Thành tiền'],
-            data: invoice.items
+            headers: ['Ngày', 'Vật liệu', 'ĐVT', 'SL', 'Đơn giá', 'Thành tiền'],
+            data: sortedItems
                 .map(
                   (item) => [
+                    AppDateUtils.formatDisplay((item.deliveryDate ?? invoice.invoiceDate).toIso8601String().substring(0, 10)),
                     item.materialName,
                     item.unit,
-                    item.quantity.toString(),
+                    MoneyUtils.formatQty(item.quantity),
                     MoneyUtils.format(item.sellingPriceCents),
                     MoneyUtils.format(item.lineTotalCents),
                   ],
@@ -82,6 +141,14 @@ class InvoiceExportService {
             headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
             border: pw.TableBorder.all(color: PdfColors.grey300),
             cellAlignment: pw.Alignment.centerLeft,
+            cellAlignments: {
+              0: pw.Alignment.centerLeft,
+              1: pw.Alignment.centerLeft,
+              2: pw.Alignment.centerLeft,
+              3: pw.Alignment.centerRight,
+              4: pw.Alignment.centerRight,
+              5: pw.Alignment.centerRight,
+            },
           ),
           pw.SizedBox(height: 16),
           pw.Align(

@@ -113,21 +113,7 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 _SummaryGrid(summary: summary),
                 const SizedBox(height: 16),
-                if (summary.lowStockMaterials.isNotEmpty) ...[
-                  const SizedBox(height: 20),
-                  Text('Vật liệu sắp hết hàng', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  ...summary.lowStockMaterials.map(
-                    (m) => Card(
-                      color: Colors.orange.shade50,
-                      child: ListTile(
-                        leading: Icon(Icons.warning_amber, color: Colors.orange.shade800),
-                        title: Text(m.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('Tồn kho: ${m.currentStock} ${m.unit} (Tối thiểu: ${m.minimumStock} ${m.unit})'),
-                      ),
-                    ),
-                  ),
-                ],
+
                 if (overdueCustomerList.isNotEmpty) ...[
                   const SizedBox(height: 20),
                   Text('Khách nợ lâu (Nợ quá 30 ngày)', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.red.shade900)),
@@ -180,7 +166,6 @@ class _SummaryGrid extends StatelessWidget {
       _Kpi('Tổng nợ', MoneyUtils.format(summary.totalDebtCents), Icons.account_balance_wallet, Colors.red),
       _Kpi('HĐ chưa TT', '${summary.unpaidInvoiceCount}', Icons.receipt, Colors.orange),
       _Kpi('Số vật liệu', '${summary.materialCount}', Icons.inventory, Colors.blue),
-      _Kpi('Giá trị kho', MoneyUtils.format(summary.totalStockValueCents), Icons.warehouse, Colors.brown),
     ];
 
     return GridView.builder(

@@ -8,9 +8,10 @@ part of 'app_settings.dart';
 
 _$AppSettingsImpl _$$AppSettingsImplFromJson(Map<String, dynamic> json) =>
     _$AppSettingsImpl(
-      storeName: json['storeName'] as String? ?? 'Cửa Hàng Vật Liệu Xây Dựng',
-      storeAddress: json['storeAddress'] as String? ?? '',
-      storePhone: json['storePhone'] as String? ?? '',
+      storeName: json['storeName'] as String? ?? 'Cửa hàng VLXD Hoàng Hạnh',
+      storeAddress: json['storeAddress'] as String? ??
+          'Phố Xuân - Phường Đông Hoa Lư - Tỉnh Ninh Bình',
+      storePhone: json['storePhone'] as String? ?? '0914140566-0941709111',
       logoUrl: json['logoUrl'] as String? ?? '',
       logoLocalPath: json['logoLocalPath'] as String? ?? '',
       truckVolume: (json['truckVolume'] as num?)?.toDouble() ?? 4.0,

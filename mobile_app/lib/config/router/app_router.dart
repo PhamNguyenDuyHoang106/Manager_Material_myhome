@@ -76,11 +76,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           StatefulShellBranch(
             routes: [
-              GoRoute(path: '/inventory', builder: (_, __) => const InventoryScreen()),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
               GoRoute(
                 path: '/settings',
                 builder: (_, __) => const SettingsScreen(),

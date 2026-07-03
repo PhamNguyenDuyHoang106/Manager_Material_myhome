@@ -9,6 +9,7 @@ abstract class InvoiceRepository {
     required DateTime invoiceDate,
     required List<InvoiceItemInput> items,
     required String deliveryAddress,
+    required String deliveryDirections,
     required String deliveryNote,
   });
   Future<void> updateInvoice({
@@ -17,10 +18,13 @@ abstract class InvoiceRepository {
     required DateTime invoiceDate,
     required List<InvoiceItemInput> items,
     required String deliveryAddress,
+    required String deliveryDirections,
     required String deliveryNote,
   });
   Future<void> cancelInvoice(String invoiceId);
   Future<void> deleteInvoice(String id);
+  Stream<List<Invoice>> watchDeletedInvoices({String query = ''});
+  Future<void> permanentlyDeleteInvoice(String id);
 }
 
 class InvoiceItemInput {
@@ -29,10 +33,14 @@ class InvoiceItemInput {
     required this.materialId,
     required this.quantity,
     required this.sellingPriceCents,
+    this.deliveryDate,
+    this.unit,
   });
 
   final String? id;
   final String materialId;
   final double quantity;
   final int sellingPriceCents;
+  final DateTime? deliveryDate;
+  final String? unit;
 }

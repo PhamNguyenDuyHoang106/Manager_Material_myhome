@@ -212,9 +212,9 @@ class __$$AppSettingsImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$AppSettingsImpl implements _AppSettings {
   const _$AppSettingsImpl(
-      {this.storeName = 'Cửa Hàng Vật Liệu Xây Dựng',
-      this.storeAddress = '',
-      this.storePhone = '',
+      {this.storeName = 'Cửa hàng VLXD Hoàng Hạnh',
+      this.storeAddress = 'Phố Xuân - Phường Đông Hoa Lư - Tỉnh Ninh Bình',
+      this.storePhone = '0914140566-0941709111',
       this.logoUrl = '',
       this.logoLocalPath = '',
       this.truckVolume = 4.0,

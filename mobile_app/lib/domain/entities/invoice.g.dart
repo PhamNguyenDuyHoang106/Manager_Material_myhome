@@ -15,6 +15,9 @@ _$InvoiceItemImpl _$$InvoiceItemImplFromJson(Map<String, dynamic> json) =>
       quantity: (json['quantity'] as num).toDouble(),
       sellingPriceCents: (json['sellingPriceCents'] as num).toInt(),
       lineTotalCents: (json['lineTotalCents'] as num).toInt(),
+      deliveryDate: json['deliveryDate'] == null
+          ? null
+          : DateTime.parse(json['deliveryDate'] as String),
     );
 
 Map<String, dynamic> _$$InvoiceItemImplToJson(_$InvoiceItemImpl instance) =>
@@ -26,6 +29,7 @@ Map<String, dynamic> _$$InvoiceItemImplToJson(_$InvoiceItemImpl instance) =>
       'quantity': instance.quantity,
       'sellingPriceCents': instance.sellingPriceCents,
       'lineTotalCents': instance.lineTotalCents,
+      'deliveryDate': instance.deliveryDate?.toIso8601String(),
     };
 
 _$InvoiceImpl _$$InvoiceImplFromJson(Map<String, dynamic> json) =>
@@ -44,6 +48,7 @@ _$InvoiceImpl _$$InvoiceImplFromJson(Map<String, dynamic> json) =>
               .toList() ??
           const [],
       deliveryAddress: json['deliveryAddress'] as String? ?? '',
+      deliveryDirections: json['deliveryDirections'] as String? ?? '',
       deliveryNote: json['deliveryNote'] as String? ?? '',
       isDeleted: json['isDeleted'] as bool? ?? false,
       deletedAt: json['deletedAt'] == null
@@ -64,6 +69,7 @@ Map<String, dynamic> _$$InvoiceImplToJson(_$InvoiceImpl instance) =>
       'updatedAt': instance.updatedAt.toIso8601String(),
       'items': instance.items.map((e) => e.toJson()).toList(),
       'deliveryAddress': instance.deliveryAddress,
+      'deliveryDirections': instance.deliveryDirections,
       'deliveryNote': instance.deliveryNote,
       'isDeleted': instance.isDeleted,
       'deletedAt': instance.deletedAt?.toIso8601String(),

@@ -23,6 +23,7 @@ class InvoiceItem with _$InvoiceItem {
     required double quantity,
     @JsonKey(name: 'sellingPriceCents') required int sellingPriceCents,
     @JsonKey(name: 'lineTotalCents') required int lineTotalCents,
+    DateTime? deliveryDate,
   }) = _InvoiceItem;
 
   factory InvoiceItem.fromJson(Map<String, dynamic> json) => _$InvoiceItemFromJson(json);
@@ -42,6 +43,7 @@ class Invoice with _$Invoice {
     required DateTime updatedAt,
     @Default([]) List<InvoiceItem> items,
     @Default('') String deliveryAddress,
+    @Default('') String deliveryDirections,
     @Default('') String deliveryNote,
     @Default(false) bool isDeleted,
     DateTime? deletedAt,

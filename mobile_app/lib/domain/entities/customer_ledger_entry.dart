@@ -20,6 +20,7 @@ class LedgerItemSnapshot with _$LedgerItemSnapshot {
     required String unit,
     required int sellingPriceCents,
     required int lineTotalCents,
+    DateTime? deliveryDate,
   }) = _LedgerItemSnapshot;
 
   factory LedgerItemSnapshot.fromJson(Map<String, dynamic> json) => _$LedgerItemSnapshotFromJson(json);

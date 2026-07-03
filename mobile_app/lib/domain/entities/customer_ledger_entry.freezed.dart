@@ -26,6 +26,7 @@ mixin _$LedgerItemSnapshot {
   String get unit => throw _privateConstructorUsedError;
   int get sellingPriceCents => throw _privateConstructorUsedError;
   int get lineTotalCents => throw _privateConstructorUsedError;
+  DateTime? get deliveryDate => throw _privateConstructorUsedError;
 
   /// Serializes this LedgerItemSnapshot to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -49,7 +50,8 @@ abstract class $LedgerItemSnapshotCopyWith<$Res> {
       double quantity,
       String unit,
       int sellingPriceCents,
-      int lineTotalCents});
+      int lineTotalCents,
+      DateTime? deliveryDate});
 }
 
 /// @nodoc
@@ -73,6 +75,7 @@ class _$LedgerItemSnapshotCopyWithImpl<$Res, $Val extends LedgerItemSnapshot>
     Object? unit = null,
     Object? sellingPriceCents = null,
     Object? lineTotalCents = null,
+    Object? deliveryDate = freezed,
   }) {
     return _then(_value.copyWith(
       materialId: null == materialId
@@ -99,6 +102,10 @@ class _$LedgerItemSnapshotCopyWithImpl<$Res, $Val extends LedgerItemSnapshot>
           ? _value.lineTotalCents
           : lineTotalCents // ignore: cast_nullable_to_non_nullable
               as int,
+      deliveryDate: freezed == deliveryDate
+          ? _value.deliveryDate
+          : deliveryDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ) as $Val);
   }
 }
@@ -117,7 +124,8 @@ abstract class _$$LedgerItemSnapshotImplCopyWith<$Res>
       double quantity,
       String unit,
       int sellingPriceCents,
-      int lineTotalCents});
+      int lineTotalCents,
+      DateTime? deliveryDate});
 }
 
 /// @nodoc
@@ -139,6 +147,7 @@ class __$$LedgerItemSnapshotImplCopyWithImpl<$Res>
     Object? unit = null,
     Object? sellingPriceCents = null,
     Object? lineTotalCents = null,
+    Object? deliveryDate = freezed,
   }) {
     return _then(_$LedgerItemSnapshotImpl(
       materialId: null == materialId
@@ -165,6 +174,10 @@ class __$$LedgerItemSnapshotImplCopyWithImpl<$Res>
           ? _value.lineTotalCents
           : lineTotalCents // ignore: cast_nullable_to_non_nullable
               as int,
+      deliveryDate: freezed == deliveryDate
+          ? _value.deliveryDate
+          : deliveryDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ));
   }
 }
@@ -178,7 +191,8 @@ class _$LedgerItemSnapshotImpl implements _LedgerItemSnapshot {
       required this.quantity,
       required this.unit,
       required this.sellingPriceCents,
-      required this.lineTotalCents});
+      required this.lineTotalCents,
+      this.deliveryDate});
 
   factory _$LedgerItemSnapshotImpl.fromJson(Map<String, dynamic> json) =>
       _$$LedgerItemSnapshotImplFromJson(json);
@@ -195,10 +209,12 @@ class _$LedgerItemSnapshotImpl implements _LedgerItemSnapshot {
   final int sellingPriceCents;
   @override
   final int lineTotalCents;
+  @override
+  final DateTime? deliveryDate;
 
   @override
   String toString() {
-    return 'LedgerItemSnapshot(materialId: $materialId, materialName: $materialName, quantity: $quantity, unit: $unit, sellingPriceCents: $sellingPriceCents, lineTotalCents: $lineTotalCents)';
+    return 'LedgerItemSnapshot(materialId: $materialId, materialName: $materialName, quantity: $quantity, unit: $unit, sellingPriceCents: $sellingPriceCents, lineTotalCents: $lineTotalCents, deliveryDate: $deliveryDate)';
   }
 
   @override
@@ -216,13 +232,15 @@ class _$LedgerItemSnapshotImpl implements _LedgerItemSnapshot {
             (identical(other.sellingPriceCents, sellingPriceCents) ||
                 other.sellingPriceCents == sellingPriceCents) &&
             (identical(other.lineTotalCents, lineTotalCents) ||
-                other.lineTotalCents == lineTotalCents));
+                other.lineTotalCents == lineTotalCents) &&
+            (identical(other.deliveryDate, deliveryDate) ||
+                other.deliveryDate == deliveryDate));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(runtimeType, materialId, materialName,
-      quantity, unit, sellingPriceCents, lineTotalCents);
+      quantity, unit, sellingPriceCents, lineTotalCents, deliveryDate);
 
   /// Create a copy of LedgerItemSnapshot
   /// with the given fields replaced by the non-null parameter values.
@@ -248,7 +266,8 @@ abstract class _LedgerItemSnapshot implements LedgerItemSnapshot {
       required final double quantity,
       required final String unit,
       required final int sellingPriceCents,
-      required final int lineTotalCents}) = _$LedgerItemSnapshotImpl;
+      required final int lineTotalCents,
+      final DateTime? deliveryDate}) = _$LedgerItemSnapshotImpl;
 
   factory _LedgerItemSnapshot.fromJson(Map<String, dynamic> json) =
       _$LedgerItemSnapshotImpl.fromJson;
@@ -265,6 +284,8 @@ abstract class _LedgerItemSnapshot implements LedgerItemSnapshot {
   int get sellingPriceCents;
   @override
   int get lineTotalCents;
+  @override
+  DateTime? get deliveryDate;
 
   /// Create a copy of LedgerItemSnapshot
   /// with the given fields replaced by the non-null parameter values.

@@ -41,23 +41,22 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyB2-iTqiM_KSuMmBAqFsFgz29V0VTUapk4',
-    appId: '1:215561197737:web:d52f42c21609bbdad271b8',
-    messagingSenderId: '215561197737',
-    projectId: 'materialmanagerment-myhome',
-    authDomain: 'materialmanagerment-myhome.firebaseapp.com',
-    storageBucket: 'materialmanagerment-myhome.firebasestorage.app',
-    measurementId: 'G-8PJTH1BV1N',
+    apiKey: 'AIzaSyB5JqEiIjb1UGc3mMSCrHZA6R34L_0mcvo',
+    appId: '1:446364299509:web:546e849be0a1cac687d5bc',
+    messagingSenderId: '446364299509',
+    projectId: 'materialmanagerment-myho-760d1',
+    authDomain: 'materialmanagerment-myho-760d1.firebaseapp.com',
+    storageBucket: 'materialmanagerment-myho-760d1.firebasestorage.app',
+    measurementId: 'G-ZGPJ1PQ75K',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDQyPPAAeQzBIhiXiny3MHCCnvf22NiZFo',
-    appId: '1:215561197737:android:72673b1c9f933a2ad271b8',
-    messagingSenderId: '215561197737',
-    projectId: 'materialmanagerment-myhome',
-    storageBucket: 'materialmanagerment-myhome.firebasestorage.app',
+    apiKey: 'AIzaSyCLO_XC-QnNN2c31DM693bMkEsNrTO2Ha4',
+    appId: '1:446364299509:android:639342c412548b5787d5bc',
+    messagingSenderId: '446364299509',
+    projectId: 'materialmanagerment-myho-760d1',
+    storageBucket: 'materialmanagerment-myho-760d1.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyA2NA4kt2V2WbGsRE-OpuwJvAA-9UHNmw8',
     appId: '1:215561197737:ios:17de0cd6d81166f8d271b8',

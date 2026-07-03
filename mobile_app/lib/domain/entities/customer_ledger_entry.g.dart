@@ -15,6 +15,9 @@ _$LedgerItemSnapshotImpl _$$LedgerItemSnapshotImplFromJson(
       unit: json['unit'] as String,
       sellingPriceCents: (json['sellingPriceCents'] as num).toInt(),
       lineTotalCents: (json['lineTotalCents'] as num).toInt(),
+      deliveryDate: json['deliveryDate'] == null
+          ? null
+          : DateTime.parse(json['deliveryDate'] as String),
     );
 
 Map<String, dynamic> _$$LedgerItemSnapshotImplToJson(
@@ -26,6 +29,7 @@ Map<String, dynamic> _$$LedgerItemSnapshotImplToJson(
       'unit': instance.unit,
       'sellingPriceCents': instance.sellingPriceCents,
       'lineTotalCents': instance.lineTotalCents,
+      'deliveryDate': instance.deliveryDate?.toIso8601String(),
     };
 
 _$CustomerLedgerEntryImpl _$$CustomerLedgerEntryImplFromJson(

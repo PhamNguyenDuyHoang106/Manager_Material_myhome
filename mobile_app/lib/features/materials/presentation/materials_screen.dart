@@ -130,7 +130,6 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
                   itemCount: materials.length,
                   itemBuilder: (_, i) {
                     final m = materials[i];
-                    final lowStock = m.currentStock <= m.minimumStock;
                     return Card(
                       child: ListTile(
                         title: Row(
@@ -159,46 +158,126 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
                           children: [
                             const SizedBox(height: 4),
                             Text(
-                              'Tồn: ${m.currentStock} ${m.unit} | Bán: ${MoneyUtils.format(m.defaultSellingPriceCents)}',
+                              'Giá bán: ${MoneyUtils.format(m.defaultSellingPriceCents)} / ${m.unit}',
                             ),
-                            if (lowStock) ...[
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(Icons.warning, size: 14, color: Colors.orange.shade800),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Sắp hết hàng (Tối thiểu: ${m.minimumStock} ${m.unit})',
-                                    style: TextStyle(color: Colors.orange.shade800, fontSize: 12, fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                            ],
                           ],
                         ),
-                        leading: CircleAvatar(
-                          backgroundColor: lowStock ? Colors.orange.shade100 : null,
-                          child: Icon(
-                            lowStock ? Icons.warning : Icons.inventory_2,
-                            color: lowStock ? Colors.orange.shade800 : null,
-                          ),
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.layers_outlined),
                         ),
-                        trailing: PopupMenuButton(
-                          itemBuilder: (_) => [
-                            const PopupMenuItem(value: 'edit', child: Text('Sửa')),
-                            const PopupMenuItem(value: 'delete', child: Text('Xóa')),
-                          ],
-                          onSelected: (v) async {
-                            if (v == 'edit') _showForm(context, material: m);
-                            if (v == 'delete') await _delete(context, m);
-                          },
-                        ),
+                        onTap: () => _showMaterialDetail(context, m),
                       ),
                     );
                   },
                 );
               },
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showMaterialDetail(BuildContext context, StockMaterial m) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    m.name,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    m.categoryName,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            _detailRow(context, 'Đơn vị tính', m.unit),
+            _detailRow(context, 'Giá nhập', MoneyUtils.format(m.defaultImportPriceCents)),
+            _detailRow(context, 'Giá bán', MoneyUtils.format(m.defaultSellingPriceCents)),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Sửa vật liệu'),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _showForm(context, material: m);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Xóa'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.red,
+                    ),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _delete(context, m);
+                    },
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(BuildContext context, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+          ),
+          Expanded(
+            child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
           ),
         ],
       ),
@@ -329,27 +408,31 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
 
   Future<void> _showForm(BuildContext context, {StockMaterial? material}) async {
     final name = TextEditingController(text: material?.name ?? '');
-    final unit = TextEditingController(text: material?.unit ?? 'cái');
     final importPrice = TextEditingController(
-      text: material != null ? MoneyUtils.fromCents(material.defaultImportPriceCents).toString() : '',
+      text: material != null ? MoneyUtils.formatInt(MoneyUtils.fromCents(material.defaultImportPriceCents).toInt()) : '',
     );
     final sellPrice = TextEditingController(
-      text: material != null ? MoneyUtils.fromCents(material.defaultSellingPriceCents).toString() : '',
-    );
-    final minStock = TextEditingController(
-      text: material != null ? material.minimumStock.toString() : '10.0',
+      text: material != null ? MoneyUtils.formatInt(MoneyUtils.fromCents(material.defaultSellingPriceCents).toInt()) : '',
     );
 
-    final categories = ref.read(categoriesStreamProvider).valueOrNull ?? [];
+    const unitOptions = ['khối', 'viên', 'cây', 'kg', 'tấn'];
+
+    final categories = (ref.read(categoriesStreamProvider).valueOrNull ?? []).cast<MaterialCategory>();
     MaterialCategory? selectedCategory;
-    
+    String? selectedUnit = material?.unit;
+
     if (material != null && material.categoryId.isNotEmpty) {
       try {
         selectedCategory = categories.firstWhere((c) => c.id == material.categoryId);
       } catch (_) {}
     }
-    
+
     selectedCategory ??= categories.isNotEmpty ? categories.first : null;
+
+    // Validate initial unit
+    if (selectedUnit != null && !unitOptions.contains(selectedUnit)) {
+      selectedUnit = null;
+    }
 
     await showDialog(
       context: context,
@@ -359,33 +442,72 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextField(controller: name, decoration: const InputDecoration(labelText: 'Tên *')),
+                const Text('Tên', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: name,
+                  decoration: const InputDecoration(
+                    hintText: 'Nhập tên vật liệu',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text('Nhóm vật liệu', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 6),
                 DropdownButtonFormField<MaterialCategory>(
                   value: selectedCategory,
-                  decoration: const InputDecoration(labelText: 'Nhóm vật liệu *'),
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
                   items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c.name))).toList(),
                   onChanged: (v) {
-                    setDialogState(() {
-                      selectedCategory = v;
-                    });
+                    setDialogState(() => selectedCategory = v);
                   },
                 ),
-                TextField(controller: unit, decoration: const InputDecoration(labelText: 'Đơn vị')),
+                const SizedBox(height: 16),
+                const Text('Đơn vị tính', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  value: selectedUnit,
+                  hint: const Text('Chọn đơn vị'),
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                  items: unitOptions.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
+                  onChanged: (v) {
+                    setDialogState(() => selectedUnit = v);
+                  },
+                ),
+                const SizedBox(height: 16),
+                const Text('Giá nhập', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 6),
                 TextField(
                   controller: importPrice,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Giá nhập'),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [ThousandsFormatter()],
+                  decoration: const InputDecoration(
+                    hintText: 'Nhập giá nhập',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
                 ),
+                const SizedBox(height: 16),
+                const Text('Giá bán', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 6),
                 TextField(
                   controller: sellPrice,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Giá bán'),
-                ),
-                TextField(
-                  controller: minStock,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Mức cảnh báo tồn tối thiểu'),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [ThousandsFormatter()],
+                  decoration: const InputDecoration(
+                    hintText: 'Nhập giá bán',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
                 ),
               ],
             ),
@@ -396,17 +518,23 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
               onPressed: () async {
                 final repo = ref.read(materialRepositoryProvider);
                 if (repo == null || name.text.trim().isEmpty) return;
+                if (selectedUnit == null) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('Vui lòng chọn đơn vị tính')),
+                  );
+                  return;
+                }
                 try {
-                  final importCents = MoneyUtils.toCents(double.tryParse(importPrice.text) ?? 0);
-                  final sellCents = MoneyUtils.toCents(double.tryParse(sellPrice.text) ?? 0);
-                  final minimumStockValue = double.tryParse(minStock.text) ?? 10.0;
+                  final importCents = MoneyUtils.toCents(double.tryParse(importPrice.text.replaceAll('.', '')) ?? 0);
+                  final sellCents = MoneyUtils.toCents(double.tryParse(sellPrice.text.replaceAll('.', '')) ?? 0);
+                  const minimumStockValue = 0.0;
                   final categoryId = selectedCategory?.id ?? '';
                   final categoryName = selectedCategory?.name ?? 'Khác';
 
                   if (material == null) {
                     await repo.createMaterial(
                       name: name.text.trim(),
-                      unit: unit.text.trim(),
+                      unit: selectedUnit!,
                       importPriceCents: importCents,
                       sellingPriceCents: sellCents,
                       categoryId: categoryId,
@@ -416,7 +544,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
                   } else {
                     await repo.updateMaterial(material.copyWith(
                       name: name.text.trim(),
-                      unit: unit.text.trim(),
+                      unit: selectedUnit!,
                       defaultImportPriceCents: importCents,
                       defaultSellingPriceCents: sellCents,
                       categoryId: categoryId,

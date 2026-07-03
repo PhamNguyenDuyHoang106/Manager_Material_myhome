@@ -6,9 +6,9 @@ part 'app_settings.g.dart';
 @freezed
 class AppSettings with _$AppSettings {
   const factory AppSettings({
-    @Default('Cửa Hàng Vật Liệu Xây Dựng') String storeName,
-    @Default('') String storeAddress,
-    @Default('') String storePhone,
+    @Default('Cửa hàng VLXD Hoàng Hạnh') String storeName,
+    @Default('Phố Xuân - Phường Đông Hoa Lư - Tỉnh Ninh Bình') String storeAddress,
+    @Default('0914140566-0941709111') String storePhone,
     @Default('') String logoUrl,
     @Default('') String logoLocalPath,
     @Default(4.0) double truckVolume,

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:archive/archive.dart';
@@ -39,7 +40,27 @@ class BackupService {
   }
 
   Future<List<Map<String, dynamic>>> listBackups(String uid) async {
-    final ref = _storage.ref().child(_userBackupsPath(uid));
+    try {
+      return await _listBackupsForStorage(_storage, uid);
+    } catch (_) {
+      try {
+        final fallbackBucket = _storage.bucket.contains('firebasestorage.app')
+            ? '${_storage.app.options.projectId}.appspot.com'
+            : '${_storage.app.options.projectId}.firebasestorage.app';
+        
+        final fallbackStorage = FirebaseStorage.instanceFor(
+          app: _storage.app,
+          bucket: 'gs://$fallbackBucket',
+        );
+        return await _listBackupsForStorage(fallbackStorage, uid);
+      } catch (_) {
+        return [];
+      }
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _listBackupsForStorage(FirebaseStorage storage, String uid) async {
+    final ref = storage.ref().child(_userBackupsPath(uid));
     final listResult = await ref.listAll();
     final list = <Map<String, dynamic>>[];
     for (final item in listResult.items) {
@@ -138,11 +159,32 @@ class BackupService {
           '_${now.minute.toString().padLeft(2, '0')}'
           '_${now.second.toString().padLeft(2, '0')}';
       final fileName = 'backup_$timestampStr.zip';
-      final fileRef = _storage.ref().child('${_userBackupsPath(uid)}/$fileName');
+      
+      // Upload with fallback
+      List<Map<String, dynamic>> backupList = [];
+      try {
+        final fileRef = _storage.ref().child('${_userBackupsPath(uid)}/$fileName');
+        await fileRef.putData(Uint8List.fromList(zipBytes));
+        backupList = await listBackups(uid);
+      } catch (e) {
+        final errStr = e.toString().toLowerCase();
+        if (errStr.contains('object-not-found') || errStr.contains('not-found') || errStr.contains('bucket')) {
+          final fallbackBucket = _storage.bucket.contains('firebasestorage.app')
+              ? '${_storage.app.options.projectId}.appspot.com'
+              : '${_storage.app.options.projectId}.firebasestorage.app';
+          
+          final fallbackStorage = FirebaseStorage.instanceFor(
+            app: _storage.app,
+            bucket: 'gs://$fallbackBucket',
+          );
+          final fallbackRef = fallbackStorage.ref().child('${_userBackupsPath(uid)}/$fileName');
+          await fallbackRef.putData(Uint8List.fromList(zipBytes));
+          backupList = await _listBackupsForStorage(fallbackStorage, uid);
+        } else {
+          rethrow;
+        }
+      }
 
-      await fileRef.putData(Uint8List.fromList(zipBytes));
-
-      final backupList = await listBackups(uid);
       if (backupList.length > 30) {
         for (int i = 30; i < backupList.length; i++) {
           final refToDelete = backupList[i]['ref'] as Reference;

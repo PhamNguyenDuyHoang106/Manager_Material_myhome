@@ -53,27 +53,29 @@ class FirestoreInventoryRepository implements InventoryRepository {
     final material = await _materialRepo.getMaterial(materialId);
     if (material == null) throw const ValidationException('Vật liệu không tồn tại');
 
-    await _firestore.runTransaction((txn) async {
-      final matRef = _firestore.collection(_paths.materials).doc(materialId);
-      final matSnap = await txn.get(matRef);
-      final current = (matSnap.data()!['currentStock'] as num).toDouble();
-      final newStock = current + quantity;
-      txn.update(matRef, {
-        'currentStock': newStock,
-        'updatedAt': DateTime.now().toIso8601String(),
-      });
-      final txRef = _txCol.doc(_uuid.v4());
-      txn.set(txRef, {
-        'materialId': materialId,
-        'materialName': material.name,
-        'type': _typeToString(InventoryTxType.import),
-        'quantity': quantity,
-        'stockAfter': newStock,
-        'importPriceCents': importPriceCents,
-        'note': note ?? '',
-        'createdAt': DateTime.now().toIso8601String(),
-      });
+    final matRef = _firestore.collection(_paths.materials).doc(materialId);
+    final matSnap = await matRef.get();
+    final current = (matSnap.data()!['currentStock'] as num).toDouble();
+    final newStock = current + quantity;
+
+    final batch = _firestore.batch();
+    batch.update(matRef, {
+      'currentStock': newStock,
+      'updatedAt': DateTime.now().toIso8601String(),
     });
+    final txRef = _txCol.doc(_uuid.v4());
+    batch.set(txRef, {
+      'materialId': materialId,
+      'materialName': material.name,
+      'type': _typeToString(InventoryTxType.import),
+      'quantity': quantity,
+      'stockAfter': newStock,
+      'importPriceCents': importPriceCents,
+      'note': note ?? '',
+      'createdAt': DateTime.now().toIso8601String(),
+    });
+
+    await batch.commit();
   }
 
   @override
@@ -85,26 +87,28 @@ class FirestoreInventoryRepository implements InventoryRepository {
     final material = await _materialRepo.getMaterial(materialId);
     if (material == null) throw const ValidationException('Vật liệu không tồn tại');
 
-    await _firestore.runTransaction((txn) async {
-      final matRef = _firestore.collection(_paths.materials).doc(materialId);
-      final matSnap = await txn.get(matRef);
-      final current = (matSnap.data()!['currentStock'] as num).toDouble();
-      final newStock = current + quantityDelta;
-      if (newStock < 0) throw const StockException('Tồn kho không được âm');
-      txn.update(matRef, {
-        'currentStock': newStock,
-        'updatedAt': DateTime.now().toIso8601String(),
-      });
-      txn.set(_txCol.doc(_uuid.v4()), {
-        'materialId': materialId,
-        'materialName': material.name,
-        'type': _typeToString(InventoryTxType.adjustment),
-        'quantity': quantityDelta,
-        'stockAfter': newStock,
-        'note': note,
-        'createdAt': DateTime.now().toIso8601String(),
-      });
+    final matRef = _firestore.collection(_paths.materials).doc(materialId);
+    final matSnap = await matRef.get();
+    final current = (matSnap.data()!['currentStock'] as num).toDouble();
+    final newStock = current + quantityDelta;
+    if (newStock < 0) throw const StockException('Tồn kho không được âm');
+
+    final batch = _firestore.batch();
+    batch.update(matRef, {
+      'currentStock': newStock,
+      'updatedAt': DateTime.now().toIso8601String(),
     });
+    batch.set(_txCol.doc(_uuid.v4()), {
+      'materialId': materialId,
+      'materialName': material.name,
+      'type': _typeToString(InventoryTxType.adjustment),
+      'quantity': quantityDelta,
+      'stockAfter': newStock,
+      'note': note,
+      'createdAt': DateTime.now().toIso8601String(),
+    });
+
+    await batch.commit();
   }
 
   Future<void> recordTransaction({

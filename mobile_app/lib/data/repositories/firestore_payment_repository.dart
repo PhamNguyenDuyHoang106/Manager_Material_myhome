@@ -39,68 +39,73 @@ class FirestorePaymentRepository implements PaymentRepository {
     final paymentId = _uuid.v4();
     final paymentDateStr = paymentDate.toIso8601String();
 
-    await _firestore.runTransaction((txn) async {
-      final invoiceRef = _firestore.collection(_paths.invoices).doc(invoiceId);
-      final invoiceSnap = await txn.get(invoiceRef);
-      if (!invoiceSnap.exists) throw const ValidationException('Hóa đơn không tồn tại');
+    final invoiceRef = _firestore.collection(_paths.invoices).doc(invoiceId);
+    final customerRef = _firestore.collection(_paths.customers).doc(customerId);
 
-      final total = invoiceSnap.data()!['totalAmountCents'] as int;
-      final paid = invoiceSnap.data()!['paidAmountCents'] as int? ?? 0;
-      final remaining = total - paid;
-      if (amountCents > remaining) {
-        throw ValidationException('Vượt quá số nợ còn lại (${remaining / 100})');
-      }
+    // Perform all reads first
+    final invoiceSnap = await invoiceRef.get();
+    final custSnap = await customerRef.get();
 
-      final newPaid = paid + amountCents;
-      final status = newPaid >= total
-          ? InvoiceStatus.paid
-          : newPaid > 0
-              ? InvoiceStatus.partiallyPaid
-              : InvoiceStatus.unpaid;
+    if (!invoiceSnap.exists) throw const ValidationException('Hóa đơn không tồn tại');
 
-      // 1. Save payment doc
-      txn.set(_firestore.collection(_paths.payments).doc(paymentId), {
-        'invoiceId': invoiceId,
-        'customerId': customerId,
-        'amountCents': amountCents,
-        'paymentDate': paymentDateStr,
-        'createdAt': now,
-        'attachmentUrl': attachmentUrl ?? '',
-        'isDeleted': false,
-      });
+    final total = invoiceSnap.data()!['totalAmountCents'] as int;
+    final paid = invoiceSnap.data()!['paidAmountCents'] as int? ?? 0;
+    final remaining = total - paid;
+    if (amountCents > remaining) {
+      throw ValidationException('Vượt quá số nợ còn lại (${remaining / 100})');
+    }
 
-      // 2. Update invoice paid amount
-      txn.update(invoiceRef, {
-        'paidAmountCents': newPaid,
-        'status': _statusToString(status),
-        'updatedAt': now,
-      });
+    final newPaid = paid + amountCents;
+    final status = newPaid >= total
+        ? InvoiceStatus.paid
+        : newPaid > 0
+            ? InvoiceStatus.partiallyPaid
+            : InvoiceStatus.unpaid;
 
-      // 3. Update customer cache
-      final customerRef = _firestore.collection(_paths.customers).doc(customerId);
-      final custSnap = await txn.get(customerRef);
-      final currentDebt = custSnap.data()?['currentDebtCacheCents'] as int? ?? 0;
-      final newDebt = currentDebt - amountCents;
-      txn.update(customerRef, {
-        'currentDebtCacheCents': newDebt,
-        'updatedAt': now,
-      });
+    final batch = _firestore.batch();
 
-      // 4. Create ledger payment entry
-      final ledgerRef = _firestore.collection(_paths.ledger(customerId)).doc(paymentId);
-      txn.set(ledgerRef, {
-        'customerId': customerId,
-        'invoiceId': invoiceId,
-        'paymentId': paymentId,
-        'date': paymentDateStr,
-        'type': 'payment',
-        'description': 'Khách trả tiền',
-        'amountCents': amountCents,
-        'createdAt': now,
-        'attachmentUrl': attachmentUrl ?? '',
-        'items': <Map<String, dynamic>>[],
-      });
+    // 1. Save payment doc
+    batch.set(_firestore.collection(_paths.payments).doc(paymentId), {
+      'invoiceId': invoiceId,
+      'customerId': customerId,
+      'amountCents': amountCents,
+      'paymentDate': paymentDateStr,
+      'createdAt': now,
+      'attachmentUrl': attachmentUrl ?? '',
+      'isDeleted': false,
     });
+
+    // 2. Update invoice paid amount
+    batch.update(invoiceRef, {
+      'paidAmountCents': newPaid,
+      'status': _statusToString(status),
+      'updatedAt': now,
+    });
+
+    // 3. Update customer cache
+    final currentDebt = custSnap.data()?['currentDebtCacheCents'] as int? ?? 0;
+    final newDebt = currentDebt - amountCents;
+    batch.update(customerRef, {
+      'currentDebtCacheCents': newDebt,
+      'updatedAt': now,
+    });
+
+    // 4. Create ledger payment entry
+    final ledgerRef = _firestore.collection(_paths.ledger(customerId)).doc(paymentId);
+    batch.set(ledgerRef, {
+      'customerId': customerId,
+      'invoiceId': invoiceId,
+      'paymentId': paymentId,
+      'date': paymentDateStr,
+      'type': 'payment',
+      'description': 'Khách trả tiền',
+      'amountCents': amountCents,
+      'createdAt': now,
+      'attachmentUrl': attachmentUrl ?? '',
+      'items': <Map<String, dynamic>>[],
+    });
+
+    await batch.commit();
   }
 
   @override
@@ -136,58 +141,63 @@ class FirestorePaymentRepository implements PaymentRepository {
     final now = DateTime.now().toIso8601String();
     final today = now.substring(0, 10);
 
-    await _firestore.runTransaction((txn) async {
-      final invoiceRef = _firestore.collection(_paths.invoices).doc(payment.invoiceId);
-      final invoiceSnap = await txn.get(invoiceRef);
-      if (!invoiceSnap.exists) throw const ValidationException('Hóa đơn liên quan không tồn tại');
+    final invoiceRef = _firestore.collection(_paths.invoices).doc(payment.invoiceId);
+    final customerRef = _firestore.collection(_paths.customers).doc(payment.customerId);
 
-      final total = invoiceSnap.data()!['totalAmountCents'] as int;
-      final paid = invoiceSnap.data()!['paidAmountCents'] as int? ?? 0;
-      final newPaid = paid - payment.amountCents;
-      final status = newPaid >= total
-          ? InvoiceStatus.paid
-          : newPaid > 0
-              ? InvoiceStatus.partiallyPaid
-              : InvoiceStatus.unpaid;
+    // Perform all reads first
+    final invoiceSnap = await invoiceRef.get();
+    final custSnap = await customerRef.get();
 
-      // 1. Mark payment as deleted
-      txn.update(_firestore.collection(_paths.payments).doc(id), {
-        'isDeleted': true,
-        'deletedAt': now,
-        'updatedAt': now,
-      });
+    if (!invoiceSnap.exists) throw const ValidationException('Hóa đơn liên quan không tồn tại');
 
-      // 2. Update invoice paid amount & status
-      txn.update(invoiceRef, {
-        'paidAmountCents': newPaid,
-        'status': _statusToString(status),
-        'updatedAt': now,
-      });
+    final total = invoiceSnap.data()!['totalAmountCents'] as int;
+    final paid = invoiceSnap.data()!['paidAmountCents'] as int? ?? 0;
+    final newPaid = paid - payment.amountCents;
+    final status = newPaid >= total
+        ? InvoiceStatus.paid
+        : newPaid > 0
+            ? InvoiceStatus.partiallyPaid
+            : InvoiceStatus.unpaid;
 
-      // 3. Update customer cache (adding back the deleted payment amount to the debt)
-      final customerRef = _firestore.collection(_paths.customers).doc(payment.customerId);
-      final custSnap = await txn.get(customerRef);
-      final currentDebt = custSnap.data()?['currentDebtCacheCents'] as int? ?? 0;
-      final newDebt = currentDebt + payment.amountCents;
-      txn.update(customerRef, {
-        'currentDebtCacheCents': newDebt,
-        'updatedAt': now,
-      });
+    final batch = _firestore.batch();
 
-      // 4. Create ledger paymentReversal entry
-      final ledgerRef = _firestore.collection(_paths.ledger(payment.customerId)).doc(_uuid.v4());
-      txn.set(ledgerRef, {
-        'customerId': payment.customerId,
-        'invoiceId': payment.invoiceId,
-        'paymentId': payment.id,
-        'date': today,
-        'type': 'paymentReversal',
-        'description': 'Hoàn tác thanh toán #${payment.id.substring(0, 8).toUpperCase()}',
-        'amountCents': payment.amountCents,
-        'createdAt': now,
-        'attachmentUrl': '',
-        'items': <Map<String, dynamic>>[],
-      });
+    // 1. Mark payment as deleted
+    batch.update(_firestore.collection(_paths.payments).doc(id), {
+      'isDeleted': true,
+      'deletedAt': now,
+      'updatedAt': now,
     });
+
+    // 2. Update invoice paid amount & status
+    batch.update(invoiceRef, {
+      'paidAmountCents': newPaid,
+      'status': _statusToString(status),
+      'updatedAt': now,
+    });
+
+    // 3. Update customer cache (adding back the deleted payment amount to the debt)
+    final currentDebt = custSnap.data()?['currentDebtCacheCents'] as int? ?? 0;
+    final newDebt = currentDebt + payment.amountCents;
+    batch.update(customerRef, {
+      'currentDebtCacheCents': newDebt,
+      'updatedAt': now,
+    });
+
+    // 4. Create ledger payment reversal entry
+    final ledgerRef = _firestore.collection(_paths.ledger(payment.customerId)).doc(_uuid.v4());
+    batch.set(ledgerRef, {
+      'customerId': payment.customerId,
+      'invoiceId': payment.invoiceId,
+      'paymentId': payment.id,
+      'date': today,
+      'type': 'paymentReversal',
+      'description': 'Hoàn tác thanh toán #${payment.id.substring(0, 8).toUpperCase()}',
+      'amountCents': payment.amountCents,
+      'createdAt': now,
+      'attachmentUrl': '',
+      'items': <Map<String, dynamic>>[],
+    });
+
+    await batch.commit();
   }
 }

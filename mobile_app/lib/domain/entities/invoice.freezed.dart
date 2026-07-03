@@ -29,6 +29,7 @@ mixin _$InvoiceItem {
   int get sellingPriceCents => throw _privateConstructorUsedError;
   @JsonKey(name: 'lineTotalCents')
   int get lineTotalCents => throw _privateConstructorUsedError;
+  DateTime? get deliveryDate => throw _privateConstructorUsedError;
 
   /// Serializes this InvoiceItem to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -53,7 +54,8 @@ abstract class $InvoiceItemCopyWith<$Res> {
       String unit,
       double quantity,
       @JsonKey(name: 'sellingPriceCents') int sellingPriceCents,
-      @JsonKey(name: 'lineTotalCents') int lineTotalCents});
+      @JsonKey(name: 'lineTotalCents') int lineTotalCents,
+      DateTime? deliveryDate});
 }
 
 /// @nodoc
@@ -78,6 +80,7 @@ class _$InvoiceItemCopyWithImpl<$Res, $Val extends InvoiceItem>
     Object? quantity = null,
     Object? sellingPriceCents = null,
     Object? lineTotalCents = null,
+    Object? deliveryDate = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -108,6 +111,10 @@ class _$InvoiceItemCopyWithImpl<$Res, $Val extends InvoiceItem>
           ? _value.lineTotalCents
           : lineTotalCents // ignore: cast_nullable_to_non_nullable
               as int,
+      deliveryDate: freezed == deliveryDate
+          ? _value.deliveryDate
+          : deliveryDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ) as $Val);
   }
 }
@@ -127,7 +134,8 @@ abstract class _$$InvoiceItemImplCopyWith<$Res>
       String unit,
       double quantity,
       @JsonKey(name: 'sellingPriceCents') int sellingPriceCents,
-      @JsonKey(name: 'lineTotalCents') int lineTotalCents});
+      @JsonKey(name: 'lineTotalCents') int lineTotalCents,
+      DateTime? deliveryDate});
 }
 
 /// @nodoc
@@ -150,6 +158,7 @@ class __$$InvoiceItemImplCopyWithImpl<$Res>
     Object? quantity = null,
     Object? sellingPriceCents = null,
     Object? lineTotalCents = null,
+    Object? deliveryDate = freezed,
   }) {
     return _then(_$InvoiceItemImpl(
       id: null == id
@@ -180,6 +189,10 @@ class __$$InvoiceItemImplCopyWithImpl<$Res>
           ? _value.lineTotalCents
           : lineTotalCents // ignore: cast_nullable_to_non_nullable
               as int,
+      deliveryDate: freezed == deliveryDate
+          ? _value.deliveryDate
+          : deliveryDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ));
   }
 }
@@ -194,7 +207,8 @@ class _$InvoiceItemImpl implements _InvoiceItem {
       required this.unit,
       required this.quantity,
       @JsonKey(name: 'sellingPriceCents') required this.sellingPriceCents,
-      @JsonKey(name: 'lineTotalCents') required this.lineTotalCents});
+      @JsonKey(name: 'lineTotalCents') required this.lineTotalCents,
+      this.deliveryDate});
 
   factory _$InvoiceItemImpl.fromJson(Map<String, dynamic> json) =>
       _$$InvoiceItemImplFromJson(json);
@@ -215,10 +229,12 @@ class _$InvoiceItemImpl implements _InvoiceItem {
   @override
   @JsonKey(name: 'lineTotalCents')
   final int lineTotalCents;
+  @override
+  final DateTime? deliveryDate;
 
   @override
   String toString() {
-    return 'InvoiceItem(id: $id, materialId: $materialId, materialName: $materialName, unit: $unit, quantity: $quantity, sellingPriceCents: $sellingPriceCents, lineTotalCents: $lineTotalCents)';
+    return 'InvoiceItem(id: $id, materialId: $materialId, materialName: $materialName, unit: $unit, quantity: $quantity, sellingPriceCents: $sellingPriceCents, lineTotalCents: $lineTotalCents, deliveryDate: $deliveryDate)';
   }
 
   @override
@@ -237,13 +253,15 @@ class _$InvoiceItemImpl implements _InvoiceItem {
             (identical(other.sellingPriceCents, sellingPriceCents) ||
                 other.sellingPriceCents == sellingPriceCents) &&
             (identical(other.lineTotalCents, lineTotalCents) ||
-                other.lineTotalCents == lineTotalCents));
+                other.lineTotalCents == lineTotalCents) &&
+            (identical(other.deliveryDate, deliveryDate) ||
+                other.deliveryDate == deliveryDate));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(runtimeType, id, materialId, materialName,
-      unit, quantity, sellingPriceCents, lineTotalCents);
+      unit, quantity, sellingPriceCents, lineTotalCents, deliveryDate);
 
   /// Create a copy of InvoiceItem
   /// with the given fields replaced by the non-null parameter values.
@@ -269,8 +287,8 @@ abstract class _InvoiceItem implements InvoiceItem {
       required final String unit,
       required final double quantity,
       @JsonKey(name: 'sellingPriceCents') required final int sellingPriceCents,
-      @JsonKey(name: 'lineTotalCents')
-      required final int lineTotalCents}) = _$InvoiceItemImpl;
+      @JsonKey(name: 'lineTotalCents') required final int lineTotalCents,
+      final DateTime? deliveryDate}) = _$InvoiceItemImpl;
 
   factory _InvoiceItem.fromJson(Map<String, dynamic> json) =
       _$InvoiceItemImpl.fromJson;
@@ -291,6 +309,8 @@ abstract class _InvoiceItem implements InvoiceItem {
   @override
   @JsonKey(name: 'lineTotalCents')
   int get lineTotalCents;
+  @override
+  DateTime? get deliveryDate;
 
   /// Create a copy of InvoiceItem
   /// with the given fields replaced by the non-null parameter values.
@@ -320,6 +340,7 @@ mixin _$Invoice {
   DateTime get updatedAt => throw _privateConstructorUsedError;
   List<InvoiceItem> get items => throw _privateConstructorUsedError;
   String get deliveryAddress => throw _privateConstructorUsedError;
+  String get deliveryDirections => throw _privateConstructorUsedError;
   String get deliveryNote => throw _privateConstructorUsedError;
   bool get isDeleted => throw _privateConstructorUsedError;
   DateTime? get deletedAt => throw _privateConstructorUsedError;
@@ -350,6 +371,7 @@ abstract class $InvoiceCopyWith<$Res> {
       DateTime updatedAt,
       List<InvoiceItem> items,
       String deliveryAddress,
+      String deliveryDirections,
       String deliveryNote,
       bool isDeleted,
       DateTime? deletedAt});
@@ -381,6 +403,7 @@ class _$InvoiceCopyWithImpl<$Res, $Val extends Invoice>
     Object? updatedAt = null,
     Object? items = null,
     Object? deliveryAddress = null,
+    Object? deliveryDirections = null,
     Object? deliveryNote = null,
     Object? isDeleted = null,
     Object? deletedAt = freezed,
@@ -430,6 +453,10 @@ class _$InvoiceCopyWithImpl<$Res, $Val extends Invoice>
           ? _value.deliveryAddress
           : deliveryAddress // ignore: cast_nullable_to_non_nullable
               as String,
+      deliveryDirections: null == deliveryDirections
+          ? _value.deliveryDirections
+          : deliveryDirections // ignore: cast_nullable_to_non_nullable
+              as String,
       deliveryNote: null == deliveryNote
           ? _value.deliveryNote
           : deliveryNote // ignore: cast_nullable_to_non_nullable
@@ -465,6 +492,7 @@ abstract class _$$InvoiceImplCopyWith<$Res> implements $InvoiceCopyWith<$Res> {
       DateTime updatedAt,
       List<InvoiceItem> items,
       String deliveryAddress,
+      String deliveryDirections,
       String deliveryNote,
       bool isDeleted,
       DateTime? deletedAt});
@@ -494,6 +522,7 @@ class __$$InvoiceImplCopyWithImpl<$Res>
     Object? updatedAt = null,
     Object? items = null,
     Object? deliveryAddress = null,
+    Object? deliveryDirections = null,
     Object? deliveryNote = null,
     Object? isDeleted = null,
     Object? deletedAt = freezed,
@@ -543,6 +572,10 @@ class __$$InvoiceImplCopyWithImpl<$Res>
           ? _value.deliveryAddress
           : deliveryAddress // ignore: cast_nullable_to_non_nullable
               as String,
+      deliveryDirections: null == deliveryDirections
+          ? _value.deliveryDirections
+          : deliveryDirections // ignore: cast_nullable_to_non_nullable
+              as String,
       deliveryNote: null == deliveryNote
           ? _value.deliveryNote
           : deliveryNote // ignore: cast_nullable_to_non_nullable
@@ -574,6 +607,7 @@ class _$InvoiceImpl implements _Invoice {
       required this.updatedAt,
       final List<InvoiceItem> items = const [],
       this.deliveryAddress = '',
+      this.deliveryDirections = '',
       this.deliveryNote = '',
       this.isDeleted = false,
       this.deletedAt})
@@ -617,6 +651,9 @@ class _$InvoiceImpl implements _Invoice {
   final String deliveryAddress;
   @override
   @JsonKey()
+  final String deliveryDirections;
+  @override
+  @JsonKey()
   final String deliveryNote;
   @override
   @JsonKey()
@@ -626,7 +663,7 @@ class _$InvoiceImpl implements _Invoice {
 
   @override
   String toString() {
-    return 'Invoice(id: $id, customerId: $customerId, customerName: $customerName, invoiceDate: $invoiceDate, totalAmountCents: $totalAmountCents, paidAmountCents: $paidAmountCents, status: $status, createdAt: $createdAt, updatedAt: $updatedAt, items: $items, deliveryAddress: $deliveryAddress, deliveryNote: $deliveryNote, isDeleted: $isDeleted, deletedAt: $deletedAt)';
+    return 'Invoice(id: $id, customerId: $customerId, customerName: $customerName, invoiceDate: $invoiceDate, totalAmountCents: $totalAmountCents, paidAmountCents: $paidAmountCents, status: $status, createdAt: $createdAt, updatedAt: $updatedAt, items: $items, deliveryAddress: $deliveryAddress, deliveryDirections: $deliveryDirections, deliveryNote: $deliveryNote, isDeleted: $isDeleted, deletedAt: $deletedAt)';
   }
 
   @override
@@ -653,6 +690,8 @@ class _$InvoiceImpl implements _Invoice {
             const DeepCollectionEquality().equals(other._items, _items) &&
             (identical(other.deliveryAddress, deliveryAddress) ||
                 other.deliveryAddress == deliveryAddress) &&
+            (identical(other.deliveryDirections, deliveryDirections) ||
+                other.deliveryDirections == deliveryDirections) &&
             (identical(other.deliveryNote, deliveryNote) ||
                 other.deliveryNote == deliveryNote) &&
             (identical(other.isDeleted, isDeleted) ||
@@ -676,6 +715,7 @@ class _$InvoiceImpl implements _Invoice {
       updatedAt,
       const DeepCollectionEquality().hash(_items),
       deliveryAddress,
+      deliveryDirections,
       deliveryNote,
       isDeleted,
       deletedAt);
@@ -709,6 +749,7 @@ abstract class _Invoice implements Invoice {
       required final DateTime updatedAt,
       final List<InvoiceItem> items,
       final String deliveryAddress,
+      final String deliveryDirections,
       final String deliveryNote,
       final bool isDeleted,
       final DateTime? deletedAt}) = _$InvoiceImpl;
@@ -740,6 +781,8 @@ abstract class _Invoice implements Invoice {
   List<InvoiceItem> get items;
   @override
   String get deliveryAddress;
+  @override
+  String get deliveryDirections;
   @override
   String get deliveryNote;
   @override

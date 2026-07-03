@@ -19,17 +19,25 @@ service cloud.firestore {
       allow read, write: if isOwner(userId);
 
       match /customers/{customerId} {
-        allow read, write: if isOwner(userId)
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId)
           && validString('name', 1, 200)
           && request.resource.data.phone is string
           && request.resource.data.address is string;
+
+        match /ledger/{ledgerId} {
+          allow read, write: if isOwner(userId);
+        }
       }
 
       match /materials/{materialId} {
-        allow read, write: if isOwner(userId)
-          && validString('name', 1, 200)
-          && request.resource.data.currentStock is number
-          && request.resource.data.currentStock >= 0;
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId)
+          && validString('name', 1, 200);
+      }
+
+      match /material_categories/{catId} {
+        allow read, write: if isOwner(userId);
       }
 
       match /inventory_transactions/{txId} {

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/errors/app_exception.dart';
+import '../../core/utils/money_utils.dart';
 import '../../domain/entities/inventory_transaction.dart';
 import '../../domain/entities/customer_ledger_entry.dart';
 import '../../domain/entities/invoice.dart';
@@ -102,81 +103,19 @@ class FirestoreInvoiceRepository implements InvoiceRepository {
     return _mapInvoice(doc);
   }
 
-  Future<Map<String, dynamic>> _loadMaterial(Transaction txn, String materialId) async {
-    final ref = _materialCol.doc(materialId);
-    final snap = await txn.get(ref);
-    if (!snap.exists || (snap.data()?['isDeleted'] == true)) {
-      throw const ValidationException('Vật liệu không tồn tại');
-    }
-    return snap.data()!;
-  }
-
-  Future<void> _deductStock(
-    Transaction txn, {
-    required String materialId,
-    required String materialName,
-    required double quantity,
-    required String invoiceId,
-  }) async {
-    final matRef = _materialCol.doc(materialId);
-    final matSnap = await txn.get(matRef);
-    final current = (matSnap.data()!['currentStock'] as num).toDouble();
-    if (current < quantity) {
-      throw StockException('Không đủ tồn kho cho "$materialName" (còn $current)');
-    }
-    final newStock = current - quantity;
-    txn.update(matRef, {
-      'currentStock': newStock,
-      'updatedAt': DateTime.now().toIso8601String(),
-    });
-    await _inventoryRepo.recordTransaction(
-      txn: txn,
-      materialId: materialId,
-      materialName: materialName,
-      type: InventoryTxType.invoiceDeduct,
-      quantity: -quantity,
-      stockAfter: newStock,
-      referenceId: invoiceId,
-    );
-  }
-
-  Future<void> _rollbackStock(
-    Transaction txn, {
-    required String materialId,
-    required String materialName,
-    required double quantity,
-    required String invoiceId,
-  }) async {
-    final matRef = _materialCol.doc(materialId);
-    final matSnap = await txn.get(matRef);
-    final current = (matSnap.data()!['currentStock'] as num).toDouble();
-    final newStock = current + quantity;
-    txn.update(matRef, {
-      'currentStock': newStock,
-      'updatedAt': DateTime.now().toIso8601String(),
-    });
-    await _inventoryRepo.recordTransaction(
-      txn: txn,
-      materialId: materialId,
-      materialName: materialName,
-      type: InventoryTxType.invoiceRollback,
-      quantity: quantity,
-      stockAfter: newStock,
-      referenceId: invoiceId,
-    );
-  }
-
   @override
   Future<String> createInvoice({
     required String customerId,
     required DateTime invoiceDate,
     required List<InvoiceItemInput> items,
     required String deliveryAddress,
+    required String deliveryDirections,
     required String deliveryNote,
   }) async {
     if (items.isEmpty) throw const ValidationException('Hóa đơn cần ít nhất một dòng');
 
-    final customerDoc = await _firestore.collection(_paths.customers).doc(customerId).get();
+    final customerRef = _firestore.collection(_paths.customers).doc(customerId);
+    final customerDoc = await customerRef.get();
     if (!customerDoc.exists) throw const ValidationException('Khách hàng không tồn tại');
     final customerName = customerDoc.data()!['name'] as String;
 
@@ -184,99 +123,118 @@ class FirestoreInvoiceRepository implements InvoiceRepository {
     final now = DateTime.now().toIso8601String();
     final invoiceDateStr = invoiceDate.toIso8601String();
 
-    await _firestore.runTransaction((txn) async {
-      int total = 0;
-      final lineData = <Map<String, dynamic>>[];
-
-      for (final item in items) {
-        final mat = await _loadMaterial(txn, item.materialId);
-        final lineTotal = (item.quantity * item.sellingPriceCents).round();
-        total += lineTotal;
-        lineData.add({
-          'material': mat,
-          'item': item,
-          'lineTotal': lineTotal,
-        });
+    // 1. READ materials first
+    final matSnaps = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+    for (final item in items) {
+      if (!matSnaps.containsKey(item.materialId)) {
+        final ref = _materialCol.doc(item.materialId);
+        matSnaps[item.materialId] = await ref.get();
       }
+    }
 
-      final invoiceRef = _invoiceCol.doc(invoiceId);
-      txn.set(invoiceRef, {
-        'customerId': customerId,
-        'customerName': customerName,
-        'invoiceDate': invoiceDateStr,
-        'totalAmountCents': total,
-        'paidAmountCents': 0,
-        'status': _statusToString(InvoiceStatus.unpaid),
-        'createdAt': now,
-        'updatedAt': now,
-        'deliveryAddress': deliveryAddress,
-        'deliveryNote': deliveryNote,
-      });
+    // 2. VALIDATION & COMPUTATION (In memory)
+    int total = 0;
+    final lineData = <Map<String, dynamic>>[];
 
-      final customerRef = _firestore.collection(_paths.customers).doc(customerId);
-      final custSnap = await txn.get(customerRef);
-      final currentDebt = custSnap.data()?['currentDebtCacheCents'] as int? ?? 0;
-      final newDebt = currentDebt + total;
-      txn.update(customerRef, {
-        'currentDebtCacheCents': newDebt,
-        'updatedAt': now,
-      });
-
-      for (final row in lineData) {
-        final item = row['item'] as InvoiceItemInput;
-        final mat = row['material'] as Map<String, dynamic>;
-        final lineTotal = row['lineTotal'] as int;
-        final itemId = _uuid.v4();
-        txn.set(_firestore.collection(_paths.invoiceItems(invoiceId)).doc(itemId), {
-          'materialId': item.materialId,
-          'materialName': mat['name'],
-          'unit': mat['unit'],
-          'quantity': item.quantity,
-          'sellingPriceCents': item.sellingPriceCents,
-          'lineTotalCents': lineTotal,
-        });
-        await _deductStock(
-          txn,
-          materialId: item.materialId,
-          materialName: mat['name'] as String,
-          quantity: item.quantity,
-          invoiceId: invoiceId,
-        );
+    for (final item in items) {
+      final matSnap = matSnaps[item.materialId]!;
+      if (!matSnap.exists || (matSnap.data()?['isDeleted'] == true)) {
+        throw const ValidationException('Vật liệu không tồn tại');
       }
+      final mat = matSnap.data()!;
 
-      final ledgerRef = _firestore.collection(_paths.ledger(customerId)).doc(invoiceId);
-      final desc = lineData.map((row) {
-        final mat = row['material'] as Map<String, dynamic>;
-        final item = row['item'] as InvoiceItemInput;
-        return '${mat['name']}: ${item.quantity} ${mat['unit']}';
-      }).join(', ');
-
-      final snapshots = lineData.map((row) {
-        final mat = row['material'] as Map<String, dynamic>;
-        final item = row['item'] as InvoiceItemInput;
-        final lineTotal = row['lineTotal'] as int;
-        return {
-          'materialId': item.materialId,
-          'materialName': mat['name'],
-          'quantity': item.quantity,
-          'unit': mat['unit'],
-          'sellingPriceCents': item.sellingPriceCents,
-          'lineTotalCents': lineTotal,
-        };
-      }).toList();
-
-      txn.set(ledgerRef, {
-        'customerId': customerId,
-        'invoiceId': invoiceId,
-        'paymentId': null,
-        'date': invoiceDateStr,
-        'type': 'sale',
-        'description': desc,
-        'amountCents': total,
-        'createdAt': now,
-        'items': snapshots,
+      final lineTotal = (item.quantity * item.sellingPriceCents).round();
+      total += lineTotal;
+      lineData.add({
+        'material': mat,
+        'item': item,
+        'lineTotal': lineTotal,
       });
+    }
+
+    final currentDebt = customerDoc.data()?['currentDebtCacheCents'] as int? ?? 0;
+    final newDebt = currentDebt + total;
+
+    // 3. WRITE phase using WriteBatch
+    final batch = _firestore.batch();
+
+    // A. Update customer debt cache
+    batch.update(customerRef, {
+      'currentDebtCacheCents': newDebt,
+      'updatedAt': now,
     });
+
+    // B. Create Invoice doc
+    final invoiceRef = _invoiceCol.doc(invoiceId);
+    batch.set(invoiceRef, {
+      'customerId': customerId,
+      'customerName': customerName,
+      'invoiceDate': invoiceDateStr,
+      'totalAmountCents': total,
+      'paidAmountCents': 0,
+      'status': _statusToString(InvoiceStatus.unpaid),
+      'createdAt': now,
+      'updatedAt': now,
+      'deliveryAddress': deliveryAddress,
+      'deliveryDirections': deliveryDirections,
+      'deliveryNote': deliveryNote,
+      'isDeleted': false,
+    });
+
+    // C. Save each line item (no stock update – inventory removed)
+    for (final row in lineData) {
+      final item = row['item'] as InvoiceItemInput;
+      final mat = row['material'] as Map<String, dynamic>;
+      final lineTotal = row['lineTotal'] as int;
+      final itemId = _uuid.v4();
+
+      batch.set(_firestore.collection(_paths.invoiceItems(invoiceId)).doc(itemId), {
+        'materialId': item.materialId,
+        'materialName': mat['name'],
+        'unit': item.unit ?? mat['unit'],
+        'quantity': item.quantity,
+        'sellingPriceCents': item.sellingPriceCents,
+        'lineTotalCents': lineTotal,
+        'deliveryDate': item.deliveryDate?.toIso8601String() ?? invoiceDateStr,
+      });
+    }
+
+    // D. Create ledger entry
+    final ledgerRef = _firestore.collection(_paths.ledger(customerId)).doc(invoiceId);
+    final desc = lineData.map((row) {
+      final mat = row['material'] as Map<String, dynamic>;
+      final item = row['item'] as InvoiceItemInput;
+      return '${mat['name']}: ${MoneyUtils.formatQty(item.quantity)} ${item.unit ?? mat['unit']}';
+    }).join(', ');
+
+    final snapshots = lineData.map((row) {
+      final mat = row['material'] as Map<String, dynamic>;
+      final item = row['item'] as InvoiceItemInput;
+      final lineTotal = row['lineTotal'] as int;
+      return {
+        'materialId': item.materialId,
+        'materialName': mat['name'],
+        'quantity': item.quantity,
+        'unit': item.unit ?? mat['unit'],
+        'sellingPriceCents': item.sellingPriceCents,
+        'lineTotalCents': lineTotal,
+        'deliveryDate': item.deliveryDate?.toIso8601String() ?? invoiceDateStr,
+      };
+    }).toList();
+
+    batch.set(ledgerRef, {
+      'customerId': customerId,
+      'invoiceId': invoiceId,
+      'paymentId': null,
+      'date': invoiceDateStr,
+      'type': 'sale',
+      'description': desc,
+      'amountCents': total,
+      'createdAt': now,
+      'items': snapshots,
+    });
+
+    await batch.commit();
 
     return invoiceId;
   }
@@ -288,6 +246,7 @@ class FirestoreInvoiceRepository implements InvoiceRepository {
     required DateTime invoiceDate,
     required List<InvoiceItemInput> items,
     required String deliveryAddress,
+    required String deliveryDirections,
     required String deliveryNote,
   }) async {
     final existing = await getInvoice(invoiceId);
@@ -311,128 +270,140 @@ class FirestoreInvoiceRepository implements InvoiceRepository {
     final invoiceDateStr = invoiceDate.toIso8601String();
     final now = DateTime.now().toIso8601String();
 
-    await _firestore.runTransaction((txn) async {
-      for (final oldItem in existing.items) {
-        await _rollbackStock(
-          txn,
-          materialId: oldItem.materialId,
-          materialName: oldItem.materialName,
-          quantity: oldItem.quantity,
-          invoiceId: invoiceId,
-        );
+    // 1. READ customer & materials first
+    final oldCustSnap = await _firestore.collection(_paths.customers).doc(existing.customerId).get();
+    DocumentSnapshot<Map<String, dynamic>>? newCustSnap;
+    if (existing.customerId != customerId) {
+      newCustSnap = await _firestore.collection(_paths.customers).doc(customerId).get();
+    }
+
+    // Only read materials for validation (not stock)
+    final matSnaps = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+    for (final newItem in items) {
+      if (!matSnaps.containsKey(newItem.materialId)) {
+        matSnaps[newItem.materialId] = await _materialCol.doc(newItem.materialId).get();
       }
+    }
 
-      for (final doc in oldItemsSnap.docs) {
-        txn.delete(doc.reference);
+    // 2. VALIDATION & COMPUTATION
+    int total = 0;
+    final lineData = <Map<String, dynamic>>[];
+    for (final item in items) {
+      final matSnap = matSnaps[item.materialId]!;
+      if (!matSnap.exists || (matSnap.data()?['isDeleted'] == true)) {
+        throw const ValidationException('Vật liệu không tồn tại');
       }
+      final mat = matSnap.data()!;
 
-      int total = 0;
-      final lineData = <Map<String, dynamic>>[];
-      for (final item in items) {
-        final mat = await _loadMaterial(txn, item.materialId);
-        final lineTotal = (item.quantity * item.sellingPriceCents).round();
-        total += lineTotal;
-        final itemId = _uuid.v4();
-        txn.set(itemsCol.doc(itemId), {
-          'materialId': item.materialId,
-          'materialName': mat['name'],
-          'unit': mat['unit'],
-          'quantity': item.quantity,
-          'sellingPriceCents': item.sellingPriceCents,
-          'lineTotalCents': lineTotal,
-        });
-        lineData.add({
-          'material': mat,
-          'item': item,
-          'lineTotal': lineTotal,
-        });
-        await _deductStock(
-          txn,
-          materialId: item.materialId,
-          materialName: mat['name'] as String,
-          quantity: item.quantity,
-          invoiceId: invoiceId,
-        );
-      }
-
-      // Update customer debt cache
-      if (existing.customerId == customerId) {
-        final customerRef = _firestore.collection(_paths.customers).doc(customerId);
-        final custSnap = await txn.get(customerRef);
-        final currentDebt = custSnap.data()?['currentDebtCacheCents'] as int? ?? 0;
-        final newDebt = currentDebt - existing.totalAmountCents + total;
-        txn.update(customerRef, {
-          'currentDebtCacheCents': newDebt,
-          'updatedAt': now,
-        });
-      } else {
-        // Subtract from old customer
-        final oldCustomerRef = _firestore.collection(_paths.customers).doc(existing.customerId);
-        final oldCustSnap = await txn.get(oldCustomerRef);
-        final oldDebt = oldCustSnap.data()?['currentDebtCacheCents'] as int? ?? 0;
-        txn.update(oldCustomerRef, {
-          'currentDebtCacheCents': oldDebt - existing.totalAmountCents,
-          'updatedAt': now,
-        });
-
-        // Add to new customer
-        final newCustomerRef = _firestore.collection(_paths.customers).doc(customerId);
-        final newCustSnap = await txn.get(newCustomerRef);
-        final newDebt = newCustSnap.data()?['currentDebtCacheCents'] as int? ?? 0;
-        txn.update(newCustomerRef, {
-          'currentDebtCacheCents': newDebt + total,
-          'updatedAt': now,
-        });
-
-        // Delete from old ledger
-        txn.delete(_firestore.collection(_paths.ledger(existing.customerId)).doc(invoiceId));
-      }
-
-      // Set ledger entry
-      final ledgerRef = _firestore.collection(_paths.ledger(customerId)).doc(invoiceId);
-      final desc = lineData.map((row) {
-        final mat = row['material'] as Map<String, dynamic>;
-        final item = row['item'] as InvoiceItemInput;
-        return '${mat['name']}: ${item.quantity} ${mat['unit']}';
-      }).join(', ');
-
-      final snapshots = lineData.map((row) {
-        final mat = row['material'] as Map<String, dynamic>;
-        final item = row['item'] as InvoiceItemInput;
-        final lineTotal = row['lineTotal'] as int;
-        return {
-          'materialId': item.materialId,
-          'materialName': mat['name'],
-          'quantity': item.quantity,
-          'unit': mat['unit'],
-          'sellingPriceCents': item.sellingPriceCents,
-          'lineTotalCents': lineTotal,
-        };
-      }).toList();
-
-      txn.set(ledgerRef, {
-        'customerId': customerId,
-        'invoiceId': invoiceId,
-        'paymentId': null,
-        'date': invoiceDateStr,
-        'type': 'sale',
-        'description': desc,
-        'amountCents': total,
-        'createdAt': existing.createdAt.toIso8601String(),
-        'items': snapshots,
+      final lineTotal = (item.quantity * item.sellingPriceCents).round();
+      total += lineTotal;
+      lineData.add({
+        'material': mat,
+        'item': item,
+        'lineTotal': lineTotal,
       });
+    }
 
-      txn.update(_invoiceCol.doc(invoiceId), {
-        'customerId': customerId,
-        'customerName': customerName,
-        'invoiceDate': invoiceDateStr,
-        'totalAmountCents': total,
-        'status': _statusToString(InvoiceStatus.unpaid),
+    // 3. WRITE phase using WriteBatch
+    final batch = _firestore.batch();
+
+    // A. Delete all old item subdocuments
+    for (final doc in oldItemsSnap.docs) {
+      batch.delete(doc.reference);
+    }
+
+    // B. Save new item documents (no stock update – inventory removed)
+    for (final row in lineData) {
+      final item = row['item'] as InvoiceItemInput;
+      final mat = row['material'] as Map<String, dynamic>;
+      final lineTotal = row['lineTotal'] as int;
+      final itemId = _uuid.v4();
+
+      batch.set(itemsCol.doc(itemId), {
+        'materialId': item.materialId,
+        'materialName': mat['name'],
+        'unit': item.unit ?? mat['unit'],
+        'quantity': item.quantity,
+        'sellingPriceCents': item.sellingPriceCents,
+        'lineTotalCents': lineTotal,
+        'deliveryDate': item.deliveryDate?.toIso8601String() ?? invoiceDateStr,
+      });
+    }
+
+    // C. Update customer debt caches
+    if (existing.customerId == customerId) {
+      final oldDebt = oldCustSnap.data()?['currentDebtCacheCents'] as int? ?? 0;
+      final newDebt = oldDebt - existing.totalAmountCents + total;
+      batch.update(_firestore.collection(_paths.customers).doc(customerId), {
+        'currentDebtCacheCents': newDebt,
         'updatedAt': now,
-        'deliveryAddress': deliveryAddress,
-        'deliveryNote': deliveryNote,
       });
+    } else {
+      final oldDebt = oldCustSnap.data()?['currentDebtCacheCents'] as int? ?? 0;
+      batch.update(_firestore.collection(_paths.customers).doc(existing.customerId), {
+        'currentDebtCacheCents': oldDebt - existing.totalAmountCents,
+        'updatedAt': now,
+      });
+
+      final newDebt = newCustSnap!.data()?['currentDebtCacheCents'] as int? ?? 0;
+      batch.update(_firestore.collection(_paths.customers).doc(customerId), {
+        'currentDebtCacheCents': newDebt + total,
+        'updatedAt': now,
+      });
+
+      // Delete ledger from old customer
+      batch.delete(_firestore.collection(_paths.ledger(existing.customerId)).doc(invoiceId));
+    }
+
+    // F. Write ledger entry
+    final ledgerRef = _firestore.collection(_paths.ledger(customerId)).doc(invoiceId);
+    final desc = lineData.map((row) {
+      final mat = row['material'] as Map<String, dynamic>;
+      final item = row['item'] as InvoiceItemInput;
+      return '${mat['name']}: ${MoneyUtils.formatQty(item.quantity)} ${item.unit ?? mat['unit']}';
+    }).join(', ');
+
+    final snapshots = lineData.map((row) {
+      final mat = row['material'] as Map<String, dynamic>;
+      final item = row['item'] as InvoiceItemInput;
+      final lineTotal = row['lineTotal'] as int;
+      return {
+        'materialId': item.materialId,
+        'materialName': mat['name'],
+        'quantity': item.quantity,
+        'unit': item.unit ?? mat['unit'],
+        'sellingPriceCents': item.sellingPriceCents,
+        'lineTotalCents': lineTotal,
+        'deliveryDate': item.deliveryDate?.toIso8601String() ?? invoiceDateStr,
+      };
+    }).toList();
+
+    batch.set(ledgerRef, {
+      'customerId': customerId,
+      'invoiceId': invoiceId,
+      'paymentId': null,
+      'date': invoiceDateStr,
+      'type': 'sale',
+      'description': desc,
+      'amountCents': total,
+      'createdAt': existing.createdAt.toIso8601String(),
+      'items': snapshots,
     });
+
+    // G. Update invoice itself
+    batch.update(_invoiceCol.doc(invoiceId), {
+      'customerId': customerId,
+      'customerName': customerName,
+      'invoiceDate': invoiceDateStr,
+      'totalAmountCents': total,
+      'status': _statusToString(InvoiceStatus.unpaid),
+      'updatedAt': now,
+      'deliveryAddress': deliveryAddress,
+      'deliveryDirections': deliveryDirections,
+      'deliveryNote': deliveryNote,
+    });
+
+    await batch.commit();
   }
 
   @override
@@ -440,7 +411,6 @@ class FirestoreInvoiceRepository implements InvoiceRepository {
     final existing = await getInvoice(invoiceId);
     if (existing == null) throw const ValidationException('Hóa đơn không tồn tại');
 
-    // Secure check: verify if there are any payments in firestore for this invoice
     final paymentsSnap = await _firestore
         .collection(_paths.payments)
         .where('invoiceId', isEqualTo: invoiceId)
@@ -453,57 +423,89 @@ class FirestoreInvoiceRepository implements InvoiceRepository {
     final now = DateTime.now().toIso8601String();
     final today = now.substring(0, 10);
 
-    await _firestore.runTransaction((txn) async {
-      // 1. Rollback stock
-      for (final item in existing.items) {
-        await _rollbackStock(
-          txn,
-          materialId: item.materialId,
-          materialName: item.materialName,
-          quantity: item.quantity,
-          invoiceId: invoiceId,
-        );
+    // 1. READ customer and materials first
+    final customerRef = _firestore.collection(_paths.customers).doc(existing.customerId);
+    final custSnap = await customerRef.get();
+
+    final matSnaps = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+    for (final item in existing.items) {
+      if (!matSnaps.containsKey(item.materialId)) {
+        matSnaps[item.materialId] = await _materialCol.doc(item.materialId).get();
       }
+    }
 
-      // 2. Update Invoice status to cancelled
-      txn.update(_invoiceCol.doc(invoiceId), {
-        'status': _statusToString(InvoiceStatus.cancelled),
-        'updatedAt': now,
-      });
+    // 2. COMPUTE stock updates
+    final currentStocks = <String, double>{};
+    for (final entry in matSnaps.entries) {
+      final data = entry.value.data();
+      currentStocks[entry.key] = data != null ? (data['currentStock'] as num).toDouble() : 0.0;
+    }
 
-      // 3. Revert customer debt cache
-      final customerRef = _firestore.collection(_paths.customers).doc(existing.customerId);
-      final custSnap = await txn.get(customerRef);
-      final currentDebt = custSnap.data()?['currentDebtCacheCents'] as int? ?? 0;
-      final newDebt = currentDebt - existing.totalAmountCents;
-      txn.update(customerRef, {
-        'currentDebtCacheCents': newDebt,
-        'updatedAt': now,
-      });
+    // 3. WRITE phase using WriteBatch
+    final batch = _firestore.batch();
 
-      // 4. Create ledger cancellation entry
-      final ledgerRef = _firestore.collection(_paths.ledger(existing.customerId)).doc(_uuid.v4());
-      final snapshots = existing.items.map((item) => {
+    // A. Rollback stock
+    for (final item in existing.items) {
+      final currentStock = currentStocks[item.materialId]!;
+      final newStock = currentStock + item.quantity;
+      currentStocks[item.materialId] = newStock;
+
+      // Record transaction
+      batch.set(_firestore.collection(_paths.inventoryTransactions).doc(_uuid.v4()), {
         'materialId': item.materialId,
         'materialName': item.materialName,
+        'type': 'invoice_rollback',
         'quantity': item.quantity,
-        'unit': item.unit,
-        'sellingPriceCents': item.sellingPriceCents,
-        'lineTotalCents': item.lineTotalCents,
-      }).toList();
-
-      txn.set(ledgerRef, {
-        'customerId': existing.customerId,
-        'invoiceId': invoiceId,
-        'paymentId': null,
-        'date': today,
-        'type': 'cancellation',
-        'description': 'Hủy hóa đơn #${invoiceId.substring(0, 8).toUpperCase()}',
-        'amountCents': existing.totalAmountCents,
+        'stockAfter': newStock,
+        'referenceId': invoiceId,
         'createdAt': now,
-        'items': snapshots,
       });
+
+      // Update material stock
+      batch.update(_materialCol.doc(item.materialId), {
+        'currentStock': newStock,
+        'updatedAt': now,
+      });
+    }
+
+    // B. Update Invoice status to cancelled
+    batch.update(_invoiceCol.doc(invoiceId), {
+      'status': _statusToString(InvoiceStatus.cancelled),
+      'updatedAt': now,
     });
+
+    // C. Revert customer debt cache
+    final currentDebt = custSnap.data()?['currentDebtCacheCents'] as int? ?? 0;
+    final newDebt = currentDebt - existing.totalAmountCents;
+    batch.update(customerRef, {
+      'currentDebtCacheCents': newDebt,
+      'updatedAt': now,
+    });
+
+    // D. Create ledger cancellation entry
+    final ledgerRef = _firestore.collection(_paths.ledger(existing.customerId)).doc(_uuid.v4());
+    final snapshots = existing.items.map((item) => {
+      'materialId': item.materialId,
+      'materialName': item.materialName,
+      'quantity': item.quantity,
+      'unit': item.unit,
+      'sellingPriceCents': item.sellingPriceCents,
+      'lineTotalCents': item.lineTotalCents,
+    }).toList();
+
+    batch.set(ledgerRef, {
+      'customerId': existing.customerId,
+      'invoiceId': invoiceId,
+      'paymentId': null,
+      'date': today,
+      'type': 'cancellation',
+      'description': 'Hủy hóa đơn #${invoiceId.substring(0, 8).toUpperCase()}',
+      'amountCents': existing.totalAmountCents,
+      'createdAt': now,
+      'items': snapshots,
+    });
+
+    await batch.commit();
   }
 
   @override
@@ -523,35 +525,68 @@ class FirestoreInvoiceRepository implements InvoiceRepository {
 
     final now = DateTime.now().toIso8601String();
 
-    await _firestore.runTransaction((txn) async {
-      final invoiceRef = _invoiceCol.doc(id);
+    final invoiceRef = _invoiceCol.doc(id);
 
-      if (existing.status != InvoiceStatus.cancelled) {
-        for (final item in existing.items) {
-          await _rollbackStock(
-            txn,
-            materialId: item.materialId,
-            materialName: item.materialName,
-            quantity: item.quantity,
-            invoiceId: id,
-          );
+    DocumentSnapshot<Map<String, dynamic>>? custSnap;
+    final customerRef = _firestore.collection(_paths.customers).doc(existing.customerId);
+    final matSnaps = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+
+    // 1. READ customer and materials first (only if invoice is not already cancelled)
+    if (existing.status != InvoiceStatus.cancelled) {
+      custSnap = await customerRef.get();
+      for (final item in existing.items) {
+        if (!matSnaps.containsKey(item.materialId)) {
+          matSnaps[item.materialId] = await _materialCol.doc(item.materialId).get();
         }
+      }
+    }
 
-        final customerRef = _firestore.collection(_paths.customers).doc(existing.customerId);
-        final custSnap = await txn.get(customerRef);
-        final currentDebt = custSnap.data()?['currentDebtCacheCents'] as int? ?? 0;
-        final newDebt = currentDebt - existing.totalAmountCents;
-        txn.update(customerRef, {
-          'currentDebtCacheCents': newDebt,
+    // 2. WRITE phase using WriteBatch
+    final batch = _firestore.batch();
+
+    if (existing.status != InvoiceStatus.cancelled) {
+      final currentStocks = <String, double>{};
+      for (final entry in matSnaps.entries) {
+        final data = entry.value.data();
+        currentStocks[entry.key] = data != null ? (data['currentStock'] as num).toDouble() : 0.0;
+      }
+
+      for (final item in existing.items) {
+        final currentStock = currentStocks[item.materialId]!;
+        final newStock = currentStock + item.quantity;
+        currentStocks[item.materialId] = newStock;
+
+        // Record transaction
+        batch.set(_firestore.collection(_paths.inventoryTransactions).doc(_uuid.v4()), {
+          'materialId': item.materialId,
+          'materialName': item.materialName,
+          'type': 'invoice_rollback',
+          'quantity': item.quantity,
+          'stockAfter': newStock,
+          'referenceId': id,
+          'createdAt': now,
+        });
+
+        // Update material stock
+        batch.update(_materialCol.doc(item.materialId), {
+          'currentStock': newStock,
           'updatedAt': now,
         });
       }
 
-      txn.update(invoiceRef, {
-        'isDeleted': true,
-        'deletedAt': now,
+      final currentDebt = custSnap!.data()?['currentDebtCacheCents'] as int? ?? 0;
+      final newDebt = currentDebt - existing.totalAmountCents;
+      batch.update(customerRef, {
+        'currentDebtCacheCents': newDebt,
         'updatedAt': now,
       });
+    }
+
+    // Mark invoice as deleted
+    batch.update(invoiceRef, {
+      'isDeleted': true,
+      'deletedAt': now,
+      'updatedAt': now,
     });
 
     final ledgerSnap = await _firestore
@@ -559,10 +594,43 @@ class FirestoreInvoiceRepository implements InvoiceRepository {
         .where('invoiceId', isEqualTo: id)
         .get();
 
-    final batch = _firestore.batch();
     for (final doc in ledgerSnap.docs) {
       batch.delete(doc.reference);
     }
+    await batch.commit();
+  }
+
+  @override
+  Stream<List<Invoice>> watchDeletedInvoices({String query = ''}) {
+    return _invoiceCol
+        .where('isDeleted', isEqualTo: true)
+        .snapshots()
+        .asyncMap((snap) async {
+      final list = <Invoice>[];
+      for (final doc in snap.docs) {
+        list.add(await _mapInvoice(doc));
+      }
+      list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      var filtered = list;
+      if (query.isNotEmpty) {
+        final q = query.toLowerCase();
+        filtered = list.where((i) => i.customerName.toLowerCase().contains(q)).toList();
+      }
+      return filtered;
+    });
+  }
+
+  @override
+  Future<void> permanentlyDeleteInvoice(String id) async {
+    final invoiceRef = _invoiceCol.doc(id);
+    final itemsCol = _firestore.collection(_paths.invoiceItems(id));
+    final itemsSnap = await itemsCol.get();
+
+    final batch = _firestore.batch();
+    for (final doc in itemsSnap.docs) {
+      batch.delete(doc.reference);
+    }
+    batch.delete(invoiceRef);
     await batch.commit();
   }
 }

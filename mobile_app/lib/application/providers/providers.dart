@@ -22,6 +22,14 @@ import '../../domain/repositories/material_repository.dart';
 import '../../domain/repositories/payment_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/services/backup_service.dart';
+import '../../domain/entities/app_settings.dart';
+import '../../domain/entities/customer.dart';
+import '../../domain/entities/customer_ledger_entry.dart';
+import '../../domain/entities/dashboard_summary.dart';
+import '../../domain/entities/inventory_transaction.dart';
+import '../../domain/entities/invoice.dart';
+import '../../domain/entities/material.dart';
+import '../../domain/entities/material_category.dart';
 
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) => FirebaseAuth.instance);
 final firestoreProvider = Provider<FirebaseFirestore>((ref) => FirebaseFirestore.instance);
@@ -101,49 +109,55 @@ final settingsRepositoryProvider = Provider<SettingsRepository?>((ref) {
   );
 });
 
-final customersStreamProvider = StreamProvider((ref) {
+final customersStreamProvider = StreamProvider<List<Customer>>((ref) {
   final repo = ref.watch(customerRepositoryProvider);
   if (repo == null) return const Stream.empty();
   return repo.watchCustomers();
 });
 
-final materialsStreamProvider = StreamProvider((ref) {
+final materialsStreamProvider = StreamProvider<List<StockMaterial>>((ref) {
   final repo = ref.watch(materialRepositoryProvider);
   if (repo == null) return const Stream.empty();
   return repo.watchMaterials();
 });
 
-final categoriesStreamProvider = StreamProvider((ref) {
+final categoriesStreamProvider = StreamProvider<List<MaterialCategory>>((ref) {
   final repo = ref.watch(materialCategoryRepositoryProvider);
   if (repo == null) return const Stream.empty();
   return repo.watchCategories();
 });
 
-final invoicesStreamProvider = StreamProvider.family((ref, String query) {
+final invoicesStreamProvider = StreamProvider.family<List<Invoice>, String>((ref, String query) {
   final repo = ref.watch(invoiceRepositoryProvider);
   if (repo == null) return const Stream.empty();
   return repo.watchInvoices(query: query);
 });
 
-final inventoryTxStreamProvider = StreamProvider((ref) {
+final deletedInvoicesStreamProvider = StreamProvider.family<List<Invoice>, String>((ref, String query) {
+  final repo = ref.watch(invoiceRepositoryProvider);
+  if (repo == null) return const Stream.empty();
+  return repo.watchDeletedInvoices(query: query);
+});
+
+final inventoryTxStreamProvider = StreamProvider<List<InventoryTransaction>>((ref) {
   final repo = ref.watch(inventoryRepositoryProvider);
   if (repo == null) return const Stream.empty();
   return repo.watchTransactions();
 });
 
-final dashboardStreamProvider = StreamProvider((ref) {
+final dashboardStreamProvider = StreamProvider<DashboardSummary>((ref) {
   final repo = ref.watch(dashboardRepositoryProvider);
   if (repo == null) return const Stream.empty();
   return repo.watchSummary();
 });
 
-final settingsStreamProvider = StreamProvider((ref) {
+final settingsStreamProvider = StreamProvider<AppSettings>((ref) {
   final repo = ref.watch(settingsRepositoryProvider);
   if (repo == null) return const Stream.empty();
   return repo.watchSettings();
 });
 
-final customerLedgerStreamProvider = StreamProvider.family((ref, String customerId) {
+final customerLedgerStreamProvider = StreamProvider.family<List<CustomerLedgerEntry>, String>((ref, String customerId) {
   final repo = ref.watch(customerRepositoryProvider);
   if (repo == null) return const Stream.empty();
   return repo.watchCustomerLedger(customerId);

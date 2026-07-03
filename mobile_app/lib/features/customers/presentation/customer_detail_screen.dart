@@ -574,7 +574,7 @@ class _LedgerCard extends StatelessWidget {
               ...entry.items.map((item) => Padding(
                     padding: const EdgeInsets.only(left: 8, top: 2),
                     child: Text(
-                      '• ${item.materialName}: ${item.quantity} ${item.unit} × ${MoneyUtils.format(item.sellingPriceCents)} = ${MoneyUtils.format(item.lineTotalCents)}',
+                      '• ${item.materialName}: ${MoneyUtils.formatQty(item.quantity)} ${item.unit} × ${MoneyUtils.format(item.sellingPriceCents)} = ${MoneyUtils.format(item.lineTotalCents)}',
                       style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
                     ),
                   )),

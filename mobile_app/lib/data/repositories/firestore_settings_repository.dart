@@ -58,7 +58,25 @@ class FirestoreSettingsRepository implements SettingsRepository {
     final file = File(localPath);
     if (!await file.exists()) return null;
     final ref = _storage.ref().child('users/$_uid/logo/store_logo.jpg');
-    await ref.putFile(file);
-    return ref.getDownloadURL();
+    try {
+      await ref.putFile(file);
+      return ref.getDownloadURL();
+    } catch (e) {
+      final errStr = e.toString().toLowerCase();
+      if (errStr.contains('object-not-found') || errStr.contains('not-found') || errStr.contains('bucket')) {
+        final fallbackBucket = _storage.bucket.contains('firebasestorage.app')
+            ? '${_storage.app.options.projectId}.appspot.com'
+            : '${_storage.app.options.projectId}.firebasestorage.app';
+        
+        final fallbackStorage = FirebaseStorage.instanceFor(
+          app: _storage.app,
+          bucket: 'gs://$fallbackBucket',
+        );
+        final fallbackRef = fallbackStorage.ref().child('users/$_uid/logo/store_logo.jpg');
+        await fallbackRef.putFile(file);
+        return fallbackRef.getDownloadURL();
+      }
+      rethrow;
+    }
   }
 }
