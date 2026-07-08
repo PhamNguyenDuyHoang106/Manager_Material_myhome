@@ -3,11 +3,88 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../application/providers/providers.dart';
-import '../../../core/utils/money_utils.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_snackbar.dart';
 import '../../../domain/entities/customer.dart';
+import '../../invoices/presentation/invoice_form_screen.dart';
+
+/// Top-level function so it can be imported and reused elsewhere (e.g., CustomerDetailScreen).
+Future<void> showCustomerFormDialog(
+  BuildContext context,
+  WidgetRef ref, {
+  Customer? customer,
+}) async {
+  final name = TextEditingController(text: customer?.name ?? '');
+  final phone = TextEditingController(text: customer?.phone ?? '');
+  final address = TextEditingController(text: customer?.address ?? '');
+  final defaultNote = TextEditingController(text: customer?.defaultNote ?? '');
+  final note = TextEditingController(text: customer?.note ?? '');
+
+  await showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(customer == null ? 'Thêm khách hàng' : 'Sửa khách hàng'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: name, decoration: const InputDecoration(labelText: 'Tên *')),
+            TextField(controller: phone, decoration: const InputDecoration(labelText: 'SĐT')),
+            TextField(controller: address, decoration: const InputDecoration(labelText: 'Địa chỉ mặc định')),
+            TextField(
+              controller: defaultNote,
+              decoration: const InputDecoration(
+                labelText: 'Chỉ dẫn giao hàng mặc định',
+                hintText: 'Ví dụ: Ngõ thứ 2 bên trái',
+              ),
+            ),
+            TextField(
+              controller: note,
+              decoration: const InputDecoration(
+                labelText: 'Ghi chú khách hàng',
+                hintText: 'Ví dụ: Khách quen, trả tiền cuối tháng',
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+        FilledButton(
+          onPressed: () async {
+            if (name.text.trim().isEmpty) return;
+            final repo = ref.read(customerRepositoryProvider);
+            if (repo == null) return;
+            try {
+              if (customer == null) {
+                await repo.createCustomer(
+                  name: name.text.trim(),
+                  phone: phone.text.trim(),
+                  address: address.text.trim(),
+                  defaultNote: defaultNote.text.trim(),
+                  note: note.text.trim(),
+                );
+              } else {
+                await repo.updateCustomer(customer.copyWith(
+                  name: name.text.trim(),
+                  phone: phone.text.trim(),
+                  address: address.text.trim(),
+                  defaultNote: defaultNote.text.trim(),
+                  note: note.text.trim(),
+                ));
+              }
+              if (ctx.mounted) Navigator.pop(ctx);
+            } catch (e) {
+              if (ctx.mounted) showErrorSnackBar(ctx, e);
+            }
+          },
+          child: const Text('Lưu'),
+        ),
+      ],
+    ),
+  );
+}
 
 class CustomersScreen extends ConsumerStatefulWidget {
   const CustomersScreen({super.key});
@@ -87,10 +164,12 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                         onTap: () => context.push('/customers/${c.id}'),
                         trailing: PopupMenuButton(
                           itemBuilder: (_) => [
-                            const PopupMenuItem(value: 'edit', child: Text('Sửa')),
-                            const PopupMenuItem(value: 'delete', child: Text('Xóa')),
+                            const PopupMenuItem(value: 'invoice', child: ListTile(leading: Icon(Icons.receipt_long_outlined), title: Text('Tạo hóa đơn'))),
+                            const PopupMenuItem(value: 'edit', child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Sửa'))),
+                            const PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete_outline, color: Colors.red), title: Text('Xóa', style: TextStyle(color: Colors.red)))),
                           ],
                           onSelected: (v) async {
+                            if (v == 'invoice') _createInvoiceFor(context, c);
                             if (v == 'edit') _showCustomerForm(context, customer: c);
                             if (v == 'delete') await _deleteCustomer(context, c);
                           },
@@ -107,76 +186,16 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
     );
   }
 
-  Future<void> _showCustomerForm(BuildContext context, {Customer? customer}) async {
-    final name = TextEditingController(text: customer?.name ?? '');
-    final phone = TextEditingController(text: customer?.phone ?? '');
-    final address = TextEditingController(text: customer?.address ?? '');
-    final defaultNote = TextEditingController(text: customer?.defaultNote ?? '');
-    final note = TextEditingController(text: customer?.note ?? '');
-
-    await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(customer == null ? 'Thêm khách hàng' : 'Sửa khách hàng'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: name, decoration: const InputDecoration(labelText: 'Tên *')),
-              TextField(controller: phone, decoration: const InputDecoration(labelText: 'SĐT')),
-              TextField(controller: address, decoration: const InputDecoration(labelText: 'Địa chỉ mặc định')),
-              TextField(
-                controller: defaultNote,
-                decoration: const InputDecoration(
-                  labelText: 'Chỉ dẫn giao hàng mặc định',
-                  hintText: 'Ví dụ: Ngõ thứ 2 bên trái',
-                ),
-              ),
-              TextField(
-                controller: note,
-                decoration: const InputDecoration(
-                  labelText: 'Ghi chú khách hàng',
-                  hintText: 'Ví dụ: Khách quen, trả tiền cuối tháng',
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
-          FilledButton(
-            onPressed: () async {
-              if (name.text.trim().isEmpty) return;
-              final repo = ref.read(customerRepositoryProvider);
-              if (repo == null) return;
-              try {
-                if (customer == null) {
-                  await repo.createCustomer(
-                    name: name.text.trim(),
-                    phone: phone.text.trim(),
-                    address: address.text.trim(),
-                    defaultNote: defaultNote.text.trim(),
-                    note: note.text.trim(),
-                  );
-                } else {
-                  await repo.updateCustomer(customer.copyWith(
-                    name: name.text.trim(),
-                    phone: phone.text.trim(),
-                    address: address.text.trim(),
-                    defaultNote: defaultNote.text.trim(),
-                    note: note.text.trim(),
-                  ));
-                }
-                if (ctx.mounted) Navigator.pop(ctx);
-              } catch (e) {
-                if (ctx.mounted) showErrorSnackBar(ctx, e);
-              }
-            },
-            child: const Text('Lưu'),
-          ),
-        ],
+  void _createInvoiceFor(BuildContext context, Customer customer) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => InvoiceFormScreen(preselectedCustomer: customer),
       ),
     );
+  }
+
+  Future<void> _showCustomerForm(BuildContext context, {Customer? customer}) async {
+    await showCustomerFormDialog(context, ref, customer: customer);
   }
 
 

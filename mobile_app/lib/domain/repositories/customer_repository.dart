@@ -19,4 +19,9 @@ abstract class CustomerRepository {
   Stream<List<CustomerLedgerEntry>> watchCustomerLedger(String customerId);
   Future<void> recalculateLedger(String customerId);
   Future<void> migrateCustomerIfNeeded(String customerId);
+  Future<void> addDirectPayment({
+    required String customerId,
+    required int amountCents,
+    required DateTime paymentDate,
+  });
 }

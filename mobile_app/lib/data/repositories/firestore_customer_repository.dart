@@ -327,4 +327,46 @@ class FirestoreCustomerRepository implements CustomerRepository {
 
     await batch.commit();
   }
+
+  @override
+  Future<void> addDirectPayment({
+    required String customerId,
+    required int amountCents,
+    required DateTime paymentDate,
+  }) async {
+    if (amountCents <= 0) throw ArgumentError('Số tiền phải lớn hơn 0');
+
+    final now = DateTime.now().toIso8601String();
+    final paymentDateStr = paymentDate.toIso8601String();
+    final paymentId = _uuid.v4();
+
+    final customerRef = _col.doc(customerId);
+    final custSnap = await customerRef.get();
+    final currentDebt = custSnap.data()?['currentDebtCacheCents'] as int? ?? 0;
+
+    final batch = _firestore.batch();
+
+    // 1. Ledger entry
+    final ledgerRef = _firestore.collection(_paths.ledger(customerId)).doc(paymentId);
+    batch.set(ledgerRef, {
+      'customerId': customerId,
+      'invoiceId': null,
+      'paymentId': paymentId,
+      'date': paymentDateStr,
+      'type': 'payment',
+      'description': 'Khách trả tiền',
+      'amountCents': amountCents,
+      'createdAt': now,
+      'attachmentUrl': '',
+      'items': <Map<String, dynamic>>[],
+    });
+
+    // 2. Update customer debt cache
+    batch.update(customerRef, {
+      'currentDebtCacheCents': currentDebt - amountCents,
+      'updatedAt': now,
+    });
+
+    await batch.commit();
+  }
 }

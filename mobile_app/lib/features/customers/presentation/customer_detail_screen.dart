@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../invoices/presentation/invoice_form_screen.dart';
+
 import '../../../application/providers/providers.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/money_utils.dart';
@@ -14,6 +16,7 @@ import '../../../domain/entities/app_settings.dart';
 import '../../../domain/entities/customer.dart';
 import '../../../domain/entities/customer_ledger_entry.dart';
 import '../../../domain/services/customer_export_service.dart';
+import '../../customers/presentation/customers_screen.dart' show showCustomerFormDialog;
 
 class CustomerDetailScreen extends ConsumerStatefulWidget {
   const CustomerDetailScreen({super.key, required this.customerId});
@@ -86,6 +89,24 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
           appBar: AppBar(
             title: Text(customer.name),
             actions: [
+              // Tạo hóa đơn nhanh cho khách này
+              IconButton(
+                icon: const Icon(Icons.receipt_long_outlined),
+                tooltip: 'Tạo hóa đơn',
+                onPressed: () => _createInvoiceForCustomer(customer!),
+              ),
+              // Sửa thông tin khách hàng
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'Sửa thông tin khách hàng',
+                onPressed: () => _editCustomer(context, customer!),
+              ),
+              // Thanh toán nhanh
+              IconButton(
+                icon: const Icon(Icons.payments_outlined),
+                tooltip: 'Thanh toán',
+                onPressed: () => _createDirectPayment(context, customer!),
+              ),
               IconButton(
                 icon: const Icon(Icons.picture_as_pdf_outlined),
                 tooltip: 'Xuất PDF sổ nợ',
@@ -157,7 +178,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
 
               return Column(
                 children: [
-                  _CustomerHeader(customer: customer!, currentDebt: running),
+                  _CustomerHeader(customer: customer, currentDebt: running),
                   if (showRecalculateBanner)
                     Container(
                       color: Colors.amber.shade100,
@@ -327,6 +348,104 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
     );
   }
 
+  Future<void> _editCustomer(BuildContext context, Customer customer) async {
+    await showCustomerFormDialog(context, ref, customer: customer);
+  }
+
+  Future<void> _createInvoiceForCustomer(Customer customer) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => InvoiceFormScreen(preselectedCustomer: customer),
+      ),
+    );
+  }
+
+  Future<void> _createDirectPayment(BuildContext context, Customer customer) async {
+    final amountCtrl = TextEditingController();
+    DateTime paymentDate = DateTime.now();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              title: const Text('Thanh toán'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: amountCtrl,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [ThousandsFormatter()],
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Số tiền',
+                      suffixText: 'đ',
+                      prefixIcon: Icon(Icons.payments_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.calendar_month, size: 18),
+                    label: Text(
+                      'Ngày TT: ${AppDateUtils.formatDisplay(paymentDate.toIso8601String().substring(0, 10))}',
+                    ),
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: paymentDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) setDialogState(() => paymentDate = picked);
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Hủy'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Lưu'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final amountText = amountCtrl.text.replaceAll('.', '').replaceAll(',', '');
+    final amountInt = int.tryParse(amountText);
+    if (amountInt == null || amountInt <= 0) {
+      showErrorSnackBar(context, 'Nhập số tiền hợp lệ');
+      return;
+    }
+
+    try {
+      final repo = ref.read(customerRepositoryProvider);
+      if (repo == null) return;
+      await repo.addDirectPayment(
+        customerId: customer.id,
+        amountCents: amountInt * 100,
+        paymentDate: paymentDate,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Đã ghi thanh toán ${MoneyUtils.format(amountInt * 100)}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) showErrorSnackBar(context, e);
+    }
+  }
+
   Future<void> _exportPdf(Customer customer) async {
     final ledgerState = ref.read(customerLedgerStreamProvider(widget.customerId));
     final entries = ledgerState.valueOrNull;
@@ -477,14 +596,14 @@ class _CustomerHeader extends StatelessWidget {
   }
 }
 
-class _LedgerCard extends StatelessWidget {
+class _LedgerCard extends ConsumerWidget {
   const _LedgerCard({required this.entry, required this.runningBalance});
 
   final CustomerLedgerEntry entry;
   final int runningBalance;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isSale = entry.type == LedgerEntryType.sale;
     final isCancellation = entry.type == LedgerEntryType.cancellation;
     final isReversal = entry.type == LedgerEntryType.paymentReversal;
@@ -509,9 +628,32 @@ class _LedgerCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: entry.invoiceId != null
+            ? () async {
+                final repo = ref.read(invoiceRepositoryProvider);
+                if (repo == null) return;
+                try {
+                  final invoice = await repo.getInvoice(entry.invoiceId!);
+                  if (!context.mounted) return;
+                  if (invoice != null) {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => InvoiceFormScreen(invoice: invoice),
+                      ),
+                    );
+                  } else {
+                    showErrorSnackBar(context, 'Không tìm thấy hóa đơn này.');
+                  }
+                } catch (e) {
+                  if (context.mounted) showErrorSnackBar(context, e);
+                }
+              }
+            : null,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -589,6 +731,7 @@ class _LedgerCard extends StatelessWidget {
             ],
           ],
         ),
+      ),
       ),
     );
   }

@@ -5,16 +5,16 @@ import '../../../application/providers/providers.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/money_utils.dart';
 import '../../../core/widgets/error_snackbar.dart';
-import '../../../domain/entities/app_settings.dart';
 import '../../../domain/entities/customer.dart';
 import '../../../domain/entities/invoice.dart';
 import '../../../domain/entities/material.dart' show StockMaterial;
 import '../../../domain/repositories/invoice_repository.dart';
 
 class InvoiceFormScreen extends ConsumerStatefulWidget {
-  const InvoiceFormScreen({super.key, this.invoice});
+  const InvoiceFormScreen({super.key, this.invoice, this.preselectedCustomer});
 
   final Invoice? invoice;
+  final Customer? preselectedCustomer;
 
   @override
   ConsumerState<InvoiceFormScreen> createState() => _InvoiceFormScreenState();
@@ -44,7 +44,6 @@ class _LineItem {
   final qty = TextEditingController();
   final price = TextEditingController();
   String? selectedUnit;
-  DateTime? deliveryDate;
 }
 
 class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
@@ -52,6 +51,9 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
   final _lines = [_LineItem()];
   bool _saving = false;
   bool _initialized = false;
+
+  /// Ngày hóa đơn dùng chung cho tất cả vật liệu
+  DateTime _invoiceDate = DateTime.now();
 
   final _deliveryAddress = TextEditingController();
   final _deliveryDirections = TextEditingController();
@@ -86,10 +88,17 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
           data: (materialsRaw) {
             final customers = customersRaw.cast<Customer>();
             final materials = materialsRaw.cast<StockMaterial>();
-            final settings = settingsAsync.valueOrNull as AppSettings?;
+            final settings = settingsAsync.valueOrNull;
             final double truckVolume = settings?.truckVolume ?? 4.0;
 
             if (!_initialized) {
+              // Preselect customer if passed directly (from customer list/detail)
+              if (widget.preselectedCustomer != null && widget.invoice == null) {
+                _customer = widget.preselectedCustomer;
+                _deliveryAddress.text = _customer!.address;
+                _deliveryDirections.text = _customer!.defaultNote;
+                _deliveryNote.text = _customer!.note;
+              }
               if (widget.invoice != null) {
                 final inv = widget.invoice!;
                 try {
@@ -98,6 +107,8 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
                 _deliveryAddress.text = inv.deliveryAddress;
                 _deliveryDirections.text = inv.deliveryDirections;
                 _deliveryNote.text = inv.deliveryNote;
+                // Dùng ngày hóa đơn gốc
+                _invoiceDate = inv.invoiceDate;
 
                 _lines.clear();
                 for (final item in inv.items) {
@@ -107,7 +118,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
                   } catch (_) {}
                   line.qty.text = MoneyUtils.formatQty(item.quantity);
                   line.price.text = MoneyUtils.formatInt(MoneyUtils.fromCents(item.sellingPriceCents).toInt());
-                  line.deliveryDate = item.deliveryDate ?? inv.invoiceDate;
                   line.selectedUnit = item.unit;
                   _lines.add(line);
                 }
@@ -119,23 +129,55 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 // ── Customer dropdown ──────────────────────────
-                DropdownButtonFormField<Customer>(
-                  value: _customer,
-                  decoration: const InputDecoration(labelText: 'Khách hàng'),
-                  items: customers
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
-                      .toList(),
-                  onChanged: (v) {
-                    setState(() {
-                      _customer = v;
-                      if (v != null) {
-                        // defaultNote = Chỉ dẫn giao hàng mặc định
-                        // note = Ghi chú khách hàng
-                        _deliveryAddress.text = v.address;
-                        _deliveryDirections.text = v.defaultNote;
-                        _deliveryNote.text = v.note;
-                      }
-                    });
+                widget.preselectedCustomer != null
+                    ? InputDecorator(
+                        decoration: const InputDecoration(labelText: 'Khách hàng'),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.person_outlined, size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                              widget.preselectedCustomer!.name,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            const Spacer(),
+                            const Icon(Icons.lock_outline, size: 16, color: Colors.grey),
+                          ],
+                        ),
+                      )
+                    : DropdownButtonFormField<Customer>(
+                        value: _customer,
+                        decoration: const InputDecoration(labelText: 'Khách hàng'),
+                        items: customers
+                            .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
+                            .toList(),
+                        onChanged: (v) {
+                          setState(() {
+                            _customer = v;
+                            if (v != null) {
+                              _deliveryAddress.text = v.address;
+                              _deliveryDirections.text = v.defaultNote;
+                              _deliveryNote.text = v.note;
+                            }
+                          });
+                        },
+                      ),
+                const SizedBox(height: 12),
+                // ── Ngày hóa đơn (dùng chung) ─────────────────
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.calendar_month, size: 18),
+                  label: Text(
+                    'Ngày hóa đơn: ${AppDateUtils.formatDisplay(_invoiceDate.toIso8601String().substring(0, 10))}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _invoiceDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) setState(() => _invoiceDate = picked);
                   },
                 ),
                 const SizedBox(height: 12),
@@ -147,7 +189,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
                     prefixIcon: Icon(Icons.location_on_outlined),
                   ),
                 ),
-                // ── Directions: chỉ hiện khi khách hàng có dữ liệu ──
                 if (_customer != null && _customer!.defaultNote.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   TextField(
@@ -158,7 +199,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
                     ),
                   ),
                 ],
-                // ── Note: chỉ hiện khi khách hàng có ghi chú ──────
                 if (_customer != null && _customer!.note.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   TextField(
@@ -202,7 +242,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
 
   Widget _buildLine(int index, _LineItem line, List<StockMaterial> materials, double truckVolume) {
     final subUnits = _subUnitsFor(line.material?.unit);
-    // Ensure selectedUnit is valid for the current material
     if (line.selectedUnit != null && !subUnits.contains(line.selectedUnit)) {
       line.selectedUnit = null;
     }
@@ -213,7 +252,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
-            // Material dropdown + delete button
             Row(
               children: [
                 Expanded(
@@ -221,14 +259,12 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
                     value: line.material,
                     decoration: const InputDecoration(labelText: 'Vật liệu'),
                     items: materials
-                        .map((m) => DropdownMenuItem(
-                            value: m,
-                            child: Text(m.name)))
+                        .map((m) => DropdownMenuItem(value: m, child: Text(m.name)))
                         .toList(),
                     onChanged: (v) {
                       setState(() {
                         line.material = v;
-                        line.selectedUnit = null; // reset unit on material change
+                        line.selectedUnit = null;
                         line.price.text = v != null
                             ? MoneyUtils.formatInt(MoneyUtils.fromCents(v.defaultSellingPriceCents).toInt())
                             : '';
@@ -244,16 +280,13 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            // Quantity + unit dropdown in a Row
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: line.qty,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Số lượng',
-                    ),
+                    decoration: const InputDecoration(labelText: 'Số lượng'),
                     onChanged: (_) => setState(() {}),
                   ),
                 ),
@@ -270,30 +303,19 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
                       onChanged: (v) {
                         setState(() {
                           line.selectedUnit = v;
-
-                          // Auto-convert price in field
                           if (line.material != null) {
                             final basePrice = MoneyUtils.fromCents(line.material!.defaultSellingPriceCents);
                             final baseUnit = line.material!.unit.toLowerCase();
                             final selectedUnit = (v ?? baseUnit).toLowerCase();
-
                             double ratio = 1.0;
                             if (baseUnit == 'khối' || baseUnit == 'm3') {
-                              if (selectedUnit == 'xe') {
-                                ratio = truckVolume;
-                              }
+                              if (selectedUnit == 'xe') ratio = truckVolume;
                             } else if (baseUnit == 'tấn') {
-                              if (selectedUnit == 'tạ') {
-                                ratio = 0.1;
-                              }
+                              if (selectedUnit == 'tạ') ratio = 0.1;
                             } else if (baseUnit == 'viên') {
-                              if (selectedUnit == 'vạn') {
-                                ratio = 10000.0;
-                              }
+                              if (selectedUnit == 'vạn') ratio = 10000.0;
                             }
-
-                            final double newPrice = basePrice * ratio;
-                            line.price.text = MoneyUtils.formatInt(newPrice.toInt());
+                            line.price.text = MoneyUtils.formatInt((basePrice * ratio).toInt());
                           }
                         });
                       },
@@ -309,7 +331,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            // Price field (Full width)
             TextField(
               controller: line.price,
               keyboardType: TextInputType.number,
@@ -318,33 +339,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
                 labelText: 'Đơn giá',
                 suffixText: 'đ',
               ),
-            ),
-            const SizedBox(height: 8),
-            // Delivery date row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TextButton.icon(
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: line.deliveryDate ?? DateTime.now(),
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2100),
-                    );
-                    if (picked != null) {
-                      setState(() {
-                        line.deliveryDate = picked;
-                      });
-                    }
-                  },
-                  icon: const Icon(Icons.calendar_today, size: 16),
-                  label: Text(
-                    'Ngày vận chuyển: ${AppDateUtils.formatDisplay((line.deliveryDate ?? DateTime.now()).toIso8601String().substring(0, 10))}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-              ],
             ),
           ],
         ),
@@ -360,16 +354,12 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
     final items = <InvoiceItemInput>[];
     for (final line in _lines) {
       if (line.material == null) continue;
-      final qtyVal = double.tryParse(line.qty.text);
-      final priceVal = double.tryParse(line.price.text.replaceAll('.', ''));
-
+      final qtyVal = double.tryParse(line.qty.text.replaceAll(',', '.'));
+      final priceVal = double.tryParse(line.price.text.replaceAll('.', '').replaceAll(',', '.'));
       if (qtyVal == null || qtyVal <= 0 || priceVal == null) continue;
 
       final subUnits = _subUnitsFor(line.material!.unit);
-      final unit = subUnits.length == 1
-          ? subUnits.first
-          : (line.selectedUnit ?? '');
-
+      final unit = subUnits.length == 1 ? subUnits.first : (line.selectedUnit ?? '');
       if (unit.isEmpty) {
         showErrorSnackBar(context, 'Chọn đơn vị cho tất cả vật liệu');
         return;
@@ -379,7 +369,7 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
         materialId: line.material!.id,
         quantity: qtyVal,
         sellingPriceCents: MoneyUtils.toCents(priceVal),
-        deliveryDate: line.deliveryDate,
+        deliveryDate: _invoiceDate,
         unit: unit,
       ));
     }
@@ -393,17 +383,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
       final repo = ref.read(invoiceRepositoryProvider);
       if (repo == null) return;
 
-      // Use the earliest delivery date from all items as invoice date
-      DateTime? earliestDate;
-      for (final item in items) {
-        if (item.deliveryDate != null) {
-          if (earliestDate == null || item.deliveryDate!.isBefore(earliestDate)) {
-            earliestDate = item.deliveryDate;
-          }
-        }
-      }
-      final invoiceDate = earliestDate ?? DateTime.now();
-
       final deliveryAddr = _deliveryAddress.text.trim();
       final deliveryDirections = _deliveryDirections.text.trim();
       final deliveryNt = _deliveryNote.text.trim();
@@ -411,7 +390,7 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
       if (widget.invoice == null) {
         await repo.createInvoice(
           customerId: _customer!.id,
-          invoiceDate: invoiceDate,
+          invoiceDate: _invoiceDate,
           items: items,
           deliveryAddress: deliveryAddr,
           deliveryDirections: deliveryDirections,
@@ -421,7 +400,7 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
         await repo.updateInvoice(
           invoiceId: widget.invoice!.id,
           customerId: _customer!.id,
-          invoiceDate: invoiceDate,
+          invoiceDate: _invoiceDate,
           items: items,
           deliveryAddress: deliveryAddr,
           deliveryDirections: deliveryDirections,
@@ -430,9 +409,10 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
       }
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      showErrorSnackBar(context, e);
+      if (mounted) showErrorSnackBar(context, e);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 }
+

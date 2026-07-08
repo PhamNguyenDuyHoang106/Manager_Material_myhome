@@ -7,9 +7,10 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/customers/presentation/customers_screen.dart';
 import '../../features/customers/presentation/customer_detail_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
-import '../../features/inventory/presentation/inventory_screen.dart';
+
 import '../../features/invoices/presentation/invoice_detail_screen.dart';
-import '../../features/invoices/presentation/invoices_screen.dart';
+
+
 import '../../features/materials/presentation/materials_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/settings/presentation/backup_restore_screen.dart';
@@ -33,6 +34,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+      // Standalone invoice detail route (accessible from customer ledger)
+      GoRoute(
+        path: '/invoices/:id',
+        builder: (_, state) => InvoiceDetailScreen(invoiceId: state.pathParameters['id']!),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) => MainShellScreen(navigationShell: navigationShell),
         branches: [
@@ -50,20 +56,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: ':id',
                     builder: (_, state) => CustomerDetailScreen(customerId: state.pathParameters['id']!),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/invoices',
-                builder: (_, __) => const InvoicesScreen(),
-                routes: [
-                  GoRoute(
-                    path: ':id',
-                    builder: (_, state) => InvoiceDetailScreen(invoiceId: state.pathParameters['id']!),
                   ),
                 ],
               ),
@@ -93,6 +85,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
 
 class _AuthRefreshListenable extends ChangeNotifier {
   _AuthRefreshListenable(this._ref) {
