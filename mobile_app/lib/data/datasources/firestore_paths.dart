@@ -14,5 +14,7 @@ class FirestorePaths {
   String invoiceItems(String invoiceId) => '${invoices}/$invoiceId/invoice_items';
   String get payments => AppConstants.paymentsPath(uid);
   String ledger(String customerId) => '$customers/$customerId/ledger';
+  String get suppliers => 'users/$uid/suppliers';
+  String supplierLedger(String supplierId) => '$suppliers/$supplierId/ledger';
   String get settings => '${AppConstants.settingsPath(uid)}/${AppConstants.settingsDocId}';
 }

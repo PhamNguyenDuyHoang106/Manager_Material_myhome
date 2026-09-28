@@ -12,6 +12,7 @@ import '../../data/repositories/firestore_material_category_repository.dart';
 import '../../data/repositories/firestore_material_repository.dart';
 import '../../data/repositories/firestore_payment_repository.dart';
 import '../../data/repositories/firestore_settings_repository.dart';
+import '../../data/repositories/firestore_supplier_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/customer_repository.dart';
 import '../../domain/repositories/dashboard_repository.dart';
@@ -21,6 +22,7 @@ import '../../domain/repositories/material_category_repository.dart';
 import '../../domain/repositories/material_repository.dart';
 import '../../domain/repositories/payment_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
+import '../../domain/repositories/supplier_repository.dart';
 import '../../domain/services/backup_service.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../domain/entities/customer.dart';
@@ -30,6 +32,8 @@ import '../../domain/entities/inventory_transaction.dart';
 import '../../domain/entities/invoice.dart';
 import '../../domain/entities/material.dart';
 import '../../domain/entities/material_category.dart';
+import '../../domain/entities/supplier.dart';
+import '../../domain/entities/supplier_ledger_entry.dart';
 
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) => FirebaseAuth.instance);
 final firestoreProvider = Provider<FirebaseFirestore>((ref) => FirebaseFirestore.instance);
@@ -40,7 +44,8 @@ final authStateProvider = StreamProvider<User?>((ref) {
 });
 
 final currentUserIdProvider = Provider<String?>((ref) {
-  return ref.watch(authStateProvider).valueOrNull?.uid;
+  final user = ref.watch(authStateProvider).valueOrNull ?? ref.watch(firebaseAuthProvider).currentUser;
+  return user?.uid;
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -109,6 +114,18 @@ final settingsRepositoryProvider = Provider<SettingsRepository?>((ref) {
   );
 });
 
+final supplierRepositoryProvider = Provider<SupplierRepository?>((ref) {
+  final uid = ref.watch(currentUserIdProvider);
+  if (uid == null) return null;
+  return FirestoreSupplierRepository(ref.watch(firestoreProvider), uid);
+});
+
+final suppliersStreamProvider = StreamProvider.family<List<Supplier>, String?>((ref, query) {
+  final repo = ref.watch(supplierRepositoryProvider);
+  if (repo == null) return const Stream.empty();
+  return repo.watchSuppliers(query: query);
+});
+
 final customersStreamProvider = StreamProvider<List<Customer>>((ref) {
   final repo = ref.watch(customerRepositoryProvider);
   if (repo == null) return const Stream.empty();
@@ -169,4 +186,10 @@ final backupServiceProvider = Provider<BackupService?>((ref) {
   final settingsRepo = ref.watch(settingsRepositoryProvider);
   if (settingsRepo == null) return null;
   return BackupService(firestore, storage, settingsRepo);
+});
+
+final supplierLedgerStreamProvider = StreamProvider.family<List<SupplierLedgerEntry>, String>((ref, supplierId) {
+  final repo = ref.watch(supplierRepositoryProvider);
+  if (repo == null) return const Stream.empty();
+  return repo.watchLedger(supplierId);
 });

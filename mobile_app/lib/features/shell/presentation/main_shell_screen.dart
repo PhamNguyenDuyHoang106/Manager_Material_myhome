@@ -12,12 +12,44 @@ class MainShellScreen extends StatelessWidget {
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: navigationShell.goBranch,
+        onDestinationSelected: (index) {
+          navigationShell.goBranch(
+            index,
+            initialLocation: index == navigationShell.currentIndex,
+          );
+        },
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Tổng quan'),
-          NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people), label: 'Khách hàng'),
-          NavigationDestination(icon: Icon(Icons.category_outlined), selectedIcon: Icon(Icons.category), label: 'Vật liệu'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Cài đặt'),
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
+            label: 'Tổng quan',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people),
+            label: 'Khách hàng',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long),
+            label: 'Hóa đơn',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.category_outlined),
+            selectedIcon: Icon(Icons.category),
+            label: 'Vật liệu',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.inventory_2_outlined),
+            selectedIcon: Icon(Icons.inventory_2),
+            label: 'Nhập kho',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Cài đặt',
+          ),
         ],
       ),
     );

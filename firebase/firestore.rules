@@ -59,6 +59,10 @@ service cloud.firestore {
       match /settings/{docId} {
         allow read, write: if isOwner(userId);
       }
+
+      match /suppliers/{supplierId} {
+        allow read, write: if isOwner(userId);
+      }
     }
   }
 }
